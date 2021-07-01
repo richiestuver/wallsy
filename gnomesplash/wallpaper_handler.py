@@ -16,7 +16,9 @@ https://github.com/GNOME/gsettings-desktop-schemas/blob/master/schemas/org.gnome
 import os.path
 import imghdr  # use to determine if image is valid
 
-from gi.repository import Gio  # see PyGObject API ref for Gio.Settings or >>> help(Gio.Settings) in REPL
+from gi.repository import (
+    Gio,
+)  # see PyGObject API ref for Gio.Settings or >>> help(Gio.Settings) in REPL
 
 
 class WallpaperUpdateError(Exception):
@@ -45,17 +47,20 @@ def update_wallpaper(img_path: str, options=None) -> None:
 
     gnome_background_settings = Gio.Settings(schema="org.gnome.desktop.background")
 
-
     # check that path exists before update. if not, raise error and notify user
     # following code returns false for empty string "" and invalid rel or abs paths
-    if not os.path.exists(img_path):  
-        raise WallpaperUpdateError(f"Invalid path provided for image location: {img_path} does not exist.")
+    if not os.path.exists(img_path):
+        raise WallpaperUpdateError(
+            f"Invalid path provided for image location: {img_path} does not exist."
+        )
 
-    # what() returns None if no matching image type is determined for a given file path. 
+    # what() returns None if no matching image type is determined for a given file path.
     # See list of valid image types at https://docs.python.org/3/library/imghdr.html
     if imghdr.what(os.path.abspath(img_path)) is None:
-        raise WallpaperUpdateError(f"Invalid image type provided. {os.path.split(img_path)[-1]} is not a valid image.")
-    
+        raise WallpaperUpdateError(
+            f"Invalid image type provided. {os.path.split(img_path)[-1]} is not a valid image."
+        )
+
     # make sure to use the absolute path so resource is locatable when accessed from schema
     # XML schema is read directly, there is no path validation done by Gnome desktop
     gnome_background_settings["picture-uri"] = os.path.abspath(img_path)

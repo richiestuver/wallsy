@@ -26,9 +26,15 @@ def wallpaper_settings() -> Gio.Settings:
 @pytest.mark.parametrize(
     "img_path",
     [
-        os.path.abspath("gnomesplash/tests/test_data/img/caseen-kyle-registos-1ht1wnmfDiA-unsplash.jpg"),
-        os.path.abspath("gnomesplash/tests/test_data/img/lesly-juarez-uR7DBrAa4HE-unsplash.jpg"),
-        os.path.abspath("gnomesplash/tests/test_data/img/stephen-leonardi--k66u8LPqTc-unsplash.jpg"),
+        os.path.abspath(
+            "gnomesplash/tests/test_data/img/caseen-kyle-registos-1ht1wnmfDiA-unsplash.jpg"
+        ),
+        os.path.abspath(
+            "gnomesplash/tests/test_data/img/lesly-juarez-uR7DBrAa4HE-unsplash.jpg"
+        ),
+        os.path.abspath(
+            "gnomesplash/tests/test_data/img/stephen-leonardi--k66u8LPqTc-unsplash.jpg"
+        ),
     ],
 )
 def test_update_background_success(wallpaper_settings: Gio.Settings, img_path):
@@ -53,7 +59,12 @@ def test_update_background_success(wallpaper_settings: Gio.Settings, img_path):
 
 @pytest.mark.parametrize(
     "img_path",
-    ["", "/not/a/real/absolute/path.jpg", 42, os.path.abspath("gnomesplash/tests/test_data/img/not_an_image.txt")],
+    [
+        "",
+        "/not/a/real/absolute/path.jpg",
+        42,
+        os.path.abspath("gnomesplash/tests/test_data/img/not_an_image.txt"),
+    ],
 )
 def test_update_background_failure(img_path):
     """
