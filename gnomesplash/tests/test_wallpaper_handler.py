@@ -25,28 +25,36 @@ def wallpaper_settings() -> Gio.Settings:
 
     return Gio.Settings.new("org.gnome.desktop.background")
 
+
 @pytest.fixture
 def clear_downloads(caplog) -> None:
-    # store images downloaded as a result of tests in the project directory only. 
+    # store images downloaded as a result of tests in the project directory only.
     # This directory should be cleared prior to each run to ensure a clean test.
-    downloads_folder = os.path.abspath('gnomesplash/tests/test_data/downloads')
+    downloads_folder = os.path.abspath("gnomesplash/tests/test_data/downloads")
     if not os.path.exists(downloads_folder):
-        raise FileNotFoundError(f'Directory {downloads_folder} does not exist. Make sure project structure is intact.')
+        raise FileNotFoundError(
+            f"Directory {downloads_folder} does not exist. Make sure project structure is intact."
+        )
 
     # scandir returns an iterator of DirEntry objects that contains a representation of each file in the directory
-    # along with useful attributes like name, path, is_file, etc. 
+    # along with useful attributes like name, path, is_file, etc.
     with os.scandir(downloads_folder) as dir:
         for file_entry in dir:  # iterator, so continues until StopIteration is raised
             os.remove(file_entry.path)
 
-    # show result of test setup in testing output
+    # show result of test setup in testing output. see caplog info in Pytest docs.
     caplog.set_level(logging.INFO)
-    logging.info(f'Pre-test setup for testing download image: {downloads_folder} is empty.')
+    logging.info(f"Pre-test setup: {downloads_folder} is empty.")
 
 
-@pytest.mark.parametrize("img_url", ["https://images.unsplash.com/photo-1473081556163-2a17de81fc97",
-                         "https://images.unsplash.com/photo-1536431311719-398b6704d4cc",
-                         "https://images.unsplash.com/photo-1558328511-7d6490908755"])
+@pytest.mark.parametrize(
+    "img_url",
+    [
+        "https://images.unsplash.com/photo-1473081556163-2a17de81fc97",
+        "https://images.unsplash.com/photo-1536431311719-398b6704d4cc",
+        "https://images.unsplash.com/photo-1558328511-7d6490908755",
+    ],
+)
 def test_download_image_success(clear_downloads, img_url):
     """
     Verify that download_image function successfully downloads the target image. Attempt to open the file
@@ -55,16 +63,15 @@ def test_download_image_success(clear_downloads, img_url):
 
     assert False
 
+
 def test_download_image_failure():
     """
     Download image should fail if the target is not a valid url or is not an image. Will also
-    filename already exists at target location. Should raise 
+    filename already exists at target location. Should raise
     an appropriate error (TBD) instead of failing silently or saving the file to filesystem.
     """
 
     assert False
-
-
 
 
 @pytest.mark.parametrize(
