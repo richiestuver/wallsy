@@ -16,14 +16,31 @@ https://github.com/GNOME/gsettings-desktop-schemas/blob/master/schemas/org.gnome
 import os.path
 import imghdr  # use to determine if image is valid
 
+# see PyGObject API ref for Gio.Settings or >>> help(Gio.Settings) in REPL
 from gi.repository import (
     Gio,
-)  # see PyGObject API ref for Gio.Settings or >>> help(Gio.Settings) in REPL
+)
 
 
 class WallpaperUpdateError(Exception):
     """
     Raised when an attempt to update Gnome desktop background fails.
+    """
+
+    pass
+
+
+def download_image(url, file_path=""):
+    """
+    Download an image at specified url. This is an API agnostic function that does not
+    take an API key for a particular service. Expectation is that resource is generally
+    accesssible.
+
+    Attempt to save image at target file path. If file path does not exist, it will be created.
+    Default location is user's home directory. Returns the location on filesystem where image was saved.
+
+    If downloading image fails for one of various reasons, will raise an appropriate error instead of
+    failing silently.
     """
 
     pass
