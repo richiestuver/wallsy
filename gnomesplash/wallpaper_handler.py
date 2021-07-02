@@ -41,6 +41,8 @@ def download_image(url, file_path=""):
 
     If downloading image fails for one of various reasons, will raise an appropriate error instead of
     failing silently.
+
+    If file already exists, do not overwrite.
     """
 
     pass
