@@ -4,13 +4,14 @@ Test wallpaper_handler
 Validate that updates to Gnome desktop background are performed correctly.
 """
 
-import logging
-import os
-import os.path
+import imghdr  # validate image type
+import logging  # report info to pytest output
+import os  # manage files and dirs on fs
+import os.path  # handle path arguments for saving to fs
 from _pytest.nodes import File
 
-import pytest
-from gi.repository import Gio
+import pytest  
+from gi.repository import Gio  # see PyObject API 
 
 from gnomesplash.wallpaper_handler import update_wallpaper
 from gnomesplash.wallpaper_handler import WallpaperUpdateError
@@ -58,8 +59,13 @@ def clear_downloads(caplog) -> None:
 def test_download_image_success(clear_downloads, img_url):
     """
     Verify that download_image function successfully downloads the target image. Attempt to open the file
-    and verify that file downloaded is in fact an image.
+    and verify that file downloaded is in fact an image. Filename should be the basename of the img_url 
+    provided, with an additional extension based on image type. Expect jpg for tests.
     """
+    # TODO: specify file name to save
+    # TODO: call download image function
+    # TODO: attempt to open image 
+    # TODO: assert that file is an image. Note: assume jpg for test data. 
 
     assert False
 
@@ -67,7 +73,7 @@ def test_download_image_success(clear_downloads, img_url):
 def test_download_image_failure():
     """
     Download image should fail if the target is not a valid url or is not an image. Will also
-    filename already exists at target location. Should raise
+    fail if filename already exists at target location. Should raise
     an appropriate error (TBD) instead of failing silently or saving the file to filesystem.
     """
 
