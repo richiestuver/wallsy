@@ -106,6 +106,12 @@ def update_wallpaper(img_path: str, options=None) -> None:
 
     # check that path exists before update. if not, raise error and notify user
     # following code returns false for empty string "" and invalid rel or abs paths
+    # NOTE: os.path.exists accepts integers (open file descriptors). This won't catch
+    # invalid types for our purposes. Additional check should be used.
+
+    if type(img_path) != str:
+        raise WallpaperUpdateError(f"Invalid parameter: {img_path} is not a string.")
+
     if not os.path.exists(img_path):
         raise WallpaperUpdateError(
             f"Invalid path provided for image location: {img_path} does not exist."
