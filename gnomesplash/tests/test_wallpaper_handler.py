@@ -38,17 +38,22 @@ def clear_downloads(caplog) -> None:
     # store images downloaded as a result of tests in the project directory only.
     # This directory should be cleared prior to each run to ensure a clean test.
 
-    dirs = [os.path.abspath("gnomesplash/tests/test_data/downloads"),
-            os.path.abspath("gnomesplash/tests/test_data/downloads/extra_dir")]
-    
+    dirs = [
+        os.path.abspath("gnomesplash/tests/test_data/downloads"),
+        os.path.abspath("gnomesplash/tests/test_data/downloads/extra_dir"),
+    ]
+
     for downloads_folder in dirs:
         if os.path.exists(downloads_folder):
 
             # scandir returns an iterator of DirEntry objects that contains a representation of each file in the directory
             # along with useful attributes like name, path, is_file, etc.
             with os.scandir(downloads_folder) as dir:
-                for file_entry in dir:  # iterator, so continues until StopIteration is raised
-                    os.remove(file_entry.path)
+                for (
+                    file_entry
+                ) in dir:  # iterator, so continues until StopIteration is raised
+                    if file_entry.is_file():
+                        os.remove(file_entry.path)
 
         # show result of test setup in testing output. see caplog info in Pytest docs.
         caplog.set_level(logging.INFO)
@@ -79,6 +84,7 @@ def test_download_image_success(clear_downloads, img_url: str):
 
     with open(file_path, "rb") as file:  # will raise FileNotFound error
         assert imghdr.what(file) is not None  # None returned for invalid files
+
 
 @pytest.mark.parametrize(
     "img_url",

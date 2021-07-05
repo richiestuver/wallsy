@@ -63,8 +63,8 @@ def download_image(url: str, file_path: str):
         raise FileExistsError(f"File already exists at {destination_path}.")
 
     # make sure there is a valid directory path to prevent file not found errors on save later
-    if not os.path.exists(os.path.basename(destination_path)):
-        os.makedirs(os.path.basename(destination_path))
+    if not os.path.exists(os.path.dirname(destination_path)):
+        os.makedirs(os.path.dirname(destination_path))
 
     # now for the good stuff. get the raw image content and use the imaging library to save to file.
     # two main error conditions: bad http request or trying to access something that's not an image.
