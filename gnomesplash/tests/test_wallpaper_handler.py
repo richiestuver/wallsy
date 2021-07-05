@@ -4,6 +4,7 @@ Test wallpaper_handler
 Validate that updates to Gnome desktop background are performed correctly.
 """
 
+from genericpath import exists
 import imghdr  # validate image type
 import logging  # report info to pytest output
 import os  # manage files and dirs on fs
@@ -37,23 +38,16 @@ def clear_downloads(caplog) -> None:
     # store images downloaded as a result of tests in the project directory only.
     # This directory should be cleared prior to each run to ensure a clean test.
 
-    dirs = [
-        os.path.abspath("gnomesplash/tests/test_data/downloads"),
-        os.path.abspath("gnomesplash/tests/test_data/downloads/extra_dir"),
-    ]
-
+    dirs = [os.path.abspath("gnomesplash/tests/test_data/downloads"),
+            os.path.abspath("gnomesplash/tests/test_data/downloads/extra_dir")]
+    
     for downloads_folder in dirs:
         if os.path.exists(downloads_folder):
-            # raise FileNotFoundError(
-            #     f"Directory {downloads_folder} does not exist. Make sure project structure is intact."
-            # )
 
             # scandir returns an iterator of DirEntry objects that contains a representation of each file in the directory
             # along with useful attributes like name, path, is_file, etc.
             with os.scandir(downloads_folder) as dir:
-                for (
-                    file_entry
-                ) in dir:  # iterator, so continues until StopIteration is raised
+                for file_entry in dir:  # iterator, so continues until StopIteration is raised
                     os.remove(file_entry.path)
 
         # show result of test setup in testing output. see caplog info in Pytest docs.
@@ -86,7 +80,6 @@ def test_download_image_success(clear_downloads, img_url: str):
     with open(file_path, "rb") as file:  # will raise FileNotFound error
         assert imghdr.what(file) is not None  # None returned for invalid files
 
-
 @pytest.mark.parametrize(
     "img_url",
     [
@@ -95,15 +88,18 @@ def test_download_image_success(clear_downloads, img_url: str):
         "https://images.unsplash.com/photo-1558328511-7d6490908755",
     ],
 )
-def test_download_image_new_directory(img_url: str):
+def test_download_image_new_directory(clear_downloads, img_url: str):
     """
     Verify that download_image function creates a new directory path in the event the target file path does not exist.
     """
 
+    # make sure the directory is removed before this test.
+    extra_dir_path = "gnomesplash/tests/test_data/downloads/extra_dir"
+    if os.path.exists(extra_dir_path):
+        os.rmdir(extra_dir_path)
+
     file_name = os.path.basename(urlparse(img_url).path)
-    file_path = os.path.join(
-        "gnomesplash/tests/test_data/downloads/extra_dir", f"{file_name}.jpg"
-    )
+    file_path = os.path.join(extra_dir_path, f"{file_name}.jpg")
 
     download_image(img_url, file_path=file_path)
 
