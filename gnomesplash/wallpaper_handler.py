@@ -15,6 +15,7 @@ https://github.com/GNOME/gsettings-desktop-schemas/blob/master/schemas/org.gnome
 
 import os
 import os.path
+from pathlib import Path
 import imghdr  # use to determine if image is valid
 import io
 from PIL import Image, UnidentifiedImageError
