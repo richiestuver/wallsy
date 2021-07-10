@@ -21,6 +21,7 @@ import os.path  # handle path arguments for saving to fs
 import unittest.mock
 from pathlib import Path
 from urllib.parse import urlparse
+from itertools import cycle
 
 import pytest
 from gi.repository import Gio  # see PyObject API
@@ -42,15 +43,37 @@ def wallpaper_settings() -> Gio.Settings:
     return Gio.Settings.new("org.gnome.desktop.background")
 
 
+@pytest.fixture(scope="module")
+def cycle_test_images() -> cycle:
+    """
+    Return cycle (like an infinitely repeating generator) that collects all available test images
+    (Path objects pointing to location in test directory) so that we can iterate through them for testing.
+    Note that Pytest fixture scope is set to 'module' so that this fixture (and thus, the image generator)
+    is not torn down after each test.
+    """
+
+    return cycle(Path().rglob("*.jpg"))
+
+
+@pytest.fixture
+def test_image(cycle_test_images, scope="module") -> Path:
+    """
+    Returns the next Path object representing an image in the test_data folder.
+    """
+
+    return next(cycle_test_images)
+
+
 @pytest.mark.parametrize(
     "img_url",
     [
+        "https://example.com/fakephoto",
         "https://images.unsplash.com/photo-1473081556163-2a17de81fc97",
         "https://images.unsplash.com/photo-1536431311719-398b6704d4cc",
         "https://images.unsplash.com/photo-1558328511-7d6490908755",
     ],
 )
-def test_download_image_success(tmp_path, img_url: str):
+def test_download_image_success(tmp_path, test_image, img_url: str):
     """
     Verify that download_image function successfully downloads the target image. Attempt to open the file
     and verify that file downloaded is in fact an image. Filename should be the basename of the img_url
@@ -60,11 +83,20 @@ def test_download_image_success(tmp_path, img_url: str):
     file_name = os.path.basename(urlparse(img_url).path)
     file_path = tmp_path / f"{file_name}.jpg"
 
-    # with unittest.mock.patch('gnomesplash.wallpaper_handler.requests.models.Response', autospec=True) as mock_response:
-    #     with open('tests/test_data/img/caseen-kyle-registos-1ht1wnmfDiA-unsplash.jpg', 'rb') as img:
-    #         mock_response.content = img.read()
-    #         download_image(img_url, file_path=file_path)
-    download_image(img_url, file_path=file_path)
+    # test_image = get_test_data()
+    # test_image = next(Path().rglob('*.jpg'))  # get the first item from a generator of Path objects
+
+    with open(test_image, "rb") as img:
+        with unittest.mock.patch(
+            "wallpaper_handler.requests.get", autospec=True
+        ) as mock_get:
+            with unittest.mock.patch(
+                "wallpaper_handler.requests.models.Response", autospec=True
+            ) as mock_response:
+                mock_get.return_value = mock_response
+                mock_response.content = img.read()
+
+                download_image(img_url, file_path=file_path)
 
     with open(file_path, "rb") as file:  # will raise FileNotFound error
         assert imghdr.what(file) is not None  # None returned for invalid files
@@ -94,6 +126,7 @@ def test_download_image_new_directory(tmp_path, img_url: str):
     with open(file_path, "rb") as file:  # will raise FileNotFound error
         assert imghdr.what(file) is not None  # None returned for invalid files
 
+
 @pytest.mark.parametrize(
     "img_url",
     [
@@ -104,7 +137,7 @@ def test_download_image_new_directory(tmp_path, img_url: str):
 )
 def test_download_image_size_not_zero(tmp_path, img_url: str):
     """
-    Verify that image downloaded is not a 0kb file as can sometimes occur if an error in saving 
+    Verify that image downloaded is not a 0kb file as can sometimes occur if an error in saving
     data occurred but file nevertheless is written.
     """
 
