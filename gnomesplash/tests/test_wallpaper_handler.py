@@ -24,6 +24,7 @@ from urllib.parse import urlparse
 from itertools import cycle
 
 import pytest
+from requests import HTTPError
 from gi.repository import Gio  # see PyObject API
 
 # following entities are tested in this module:
@@ -52,7 +53,9 @@ def cycle_test_images() -> cycle:
     is not torn down after each test.
     """
 
-    return cycle(Path().rglob("*.jpg"))
+    # rglob is glob but appends **/ so we don't worry about relative pathing from execution dir and test_data
+    # from pathlib docs: ** means recursively search across current and all subdirectories
+    return cycle(Path().rglob("test_data/**/*.jpg"))
 
 
 @pytest.fixture
@@ -83,9 +86,6 @@ def test_download_image_success(tmp_path, test_image, img_url: str):
     file_name = os.path.basename(urlparse(img_url).path)
     file_path = tmp_path / f"{file_name}.jpg"
 
-    # test_image = get_test_data()
-    # test_image = next(Path().rglob('*.jpg'))  # get the first item from a generator of Path objects
-
     with open(test_image, "rb") as img:
         with unittest.mock.patch(
             "wallpaper_handler.requests.get", autospec=True
@@ -110,7 +110,7 @@ def test_download_image_success(tmp_path, test_image, img_url: str):
         "https://images.unsplash.com/photo-1558328511-7d6490908755",
     ],
 )
-def test_download_image_new_directory(tmp_path, img_url: str):
+def test_download_image_new_directory(tmp_path, test_image, img_url: str):
     """
     Verify that download_image function creates a new directory path in the event the target file path does not exist.
     """
@@ -121,7 +121,19 @@ def test_download_image_new_directory(tmp_path, img_url: str):
     file_name = os.path.basename(urlparse(img_url).path)
     file_path = extra_dir / f"{file_name}.jpg"
 
-    download_image(img_url, file_path=file_path)
+    with open(test_image, "rb") as img:
+        with unittest.mock.patch(
+            "wallpaper_handler.requests.get", autospec=True
+        ) as mock_get:
+            with unittest.mock.patch(
+                "wallpaper_handler.requests.models.Response", autospec=True
+            ) as mock_response:
+                mock_get.return_value = mock_response
+                mock_response.content = img.read()
+
+                download_image(img_url, file_path=file_path)
+
+    # download_image(img_url, file_path=file_path)
 
     with open(file_path, "rb") as file:  # will raise FileNotFound error
         assert imghdr.what(file) is not None  # None returned for invalid files
@@ -135,7 +147,7 @@ def test_download_image_new_directory(tmp_path, img_url: str):
         "https://images.unsplash.com/photo-1558328511-7d6490908755",
     ],
 )
-def test_download_image_size_not_zero(tmp_path, img_url: str):
+def test_download_image_size_not_zero(tmp_path, test_image, img_url: str):
     """
     Verify that image downloaded is not a 0kb file as can sometimes occur if an error in saving
     data occurred but file nevertheless is written.
@@ -144,7 +156,19 @@ def test_download_image_size_not_zero(tmp_path, img_url: str):
     file_name = os.path.basename(urlparse(img_url).path)
     file_path = tmp_path / f"{file_name}.jpg"
 
-    download_image(img_url, file_path)
+    with open(test_image, "rb") as img:
+        with unittest.mock.patch(
+            "wallpaper_handler.requests.get", autospec=True
+        ) as mock_get:
+            with unittest.mock.patch(
+                "wallpaper_handler.requests.models.Response", autospec=True
+            ) as mock_response:
+                mock_get.return_value = mock_response
+                mock_response.content = img.read()
+
+                download_image(img_url, file_path=file_path)
+
+    # download_image(img_url, file_path)
 
     assert file_path.stat().st_size > 0
 
@@ -156,17 +180,34 @@ def test_download_image_size_not_zero(tmp_path, img_url: str):
         "https://raw.githubusercontent.com/richiestuver/gnomesplash/master/README.md",
     ],
 )
-def test_download_image_invalid_failure(tmp_path, img_url: str):
+def test_download_image_invalid_failure(tmp_path, test_image, img_url: str):
     """
     Download image should fail if the target is not a valid url or is not an image. Should raise
     an appropriate error (TBD) instead of failing silently or saving the file to filesystem.
     """
 
+    # TODO: need to figure out how to mock out the error response correctly
+    # TODO: refactor all of the patching and mocking to use the same decorator
+    # TODO: check out the decorator format in unittest.mock first then write your own if needed
+
     file_name = os.path.basename(urlparse(img_url).path)
     file_path = tmp_path / f"{file_name}.jpg"
 
-    with pytest.raises(ImageDownloadError):
-        download_image(img_url, file_path)
+    with open(test_image, "rb") as img:
+        with unittest.mock.patch(
+            "wallpaper_handler.requests.get", autospec=True
+        ) as mock_get:
+            with unittest.mock.patch(
+                "wallpaper_handler.requests.models.Response", autospec=True
+            ) as mock_response:
+
+                mock_response.content = img.read()
+                mock_response.raise_for_status.side_effect = HTTPError
+                mock_response.status_code = 500
+                mock_get.return_value = mock_response
+
+                with pytest.raises(ImageDownloadError):
+                    download_image(img_url, file_path)
 
 
 @pytest.mark.parametrize(
@@ -175,7 +216,7 @@ def test_download_image_invalid_failure(tmp_path, img_url: str):
         "https://images.unsplash.com/photo-1473081556163-2a17de81fc97",
     ],
 )
-def test_download_image_file_exists_failure(tmp_path, img_url: str):
+def test_download_image_file_exists_failure(tmp_path, test_image, img_url: str):
     """
     Verify that download_image function does not repeat image download when file at specified
     path already exists. Function should raise FileNotFound error.
@@ -189,8 +230,18 @@ def test_download_image_file_exists_failure(tmp_path, img_url: str):
         with open(file_path, "w"):
             pass
 
-    with pytest.raises(FileExistsError):
-        download_image(img_url, file_path)
+    with open(test_image, "rb") as img:
+        with unittest.mock.patch(
+            "wallpaper_handler.requests.get", autospec=True
+        ) as mock_get:
+            with unittest.mock.patch(
+                "wallpaper_handler.requests.models.Response", autospec=True
+            ) as mock_response:
+                mock_get.return_value = mock_response
+                mock_response.content = img.read()
+
+                with pytest.raises(FileExistsError):
+                    download_image(img_url, file_path)
 
 
 @pytest.mark.parametrize(
