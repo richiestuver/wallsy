@@ -34,6 +34,30 @@ class WallpaperUpdateError(Exception):
     pass
 
 
+def set_wallpaper_location(file_path: str = "~/.local/share/backgrounds"):
+    """
+    Set the download and retrieval location for storing and accessing background images.
+    This function takes the supplied url path string, convert it to a Path object, and create
+    the directory if it does not already exist. Store the location in an environment variable.
+
+    Note on default Gnome wallpaper behavior: the builtin Gnome desktop wallpaper GUI stores images that users add through the settings GUI to the directory
+    /home/{user}/.local/share/backgrounds'. Images found in this directory will show up in
+    the GUI so for management this is the ideal location to store as a default. Note that the
+    popular Gnome Tweak Tool (not the built in settings app) does NOT save images to this location.
+    """
+
+    # since we expect the default dir to live in user's home directory, make sure this path is resolved correctly.
+    # Expand user before making path absolute.
+    wallpaper_location = Path(file_path).expanduser().resolve()
+    if not wallpaper_location.exists():
+        try:
+            wallpaper_location.mkdir(parents=True, exist_ok=True)
+        except FileExistsError:
+            raise FileExistsError(f"Error trying to create {str(wallpaper_location)}.")
+
+    # store path in environment variable
+
+
 def update_wallpaper(img_path: str, options=None) -> None:
     """
     Update the background image to the one specified by file_path. Raise BackgroundUpdateError if issues encountered
