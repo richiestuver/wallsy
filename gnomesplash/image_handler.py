@@ -17,7 +17,6 @@ but this is not intended to be a comprehensive photo manipulation program.
 import os
 import os.path
 from pathlib import Path
-import imghdr  # use to determine if image is valid
 import io
 from PIL import Image, UnidentifiedImageError
 
