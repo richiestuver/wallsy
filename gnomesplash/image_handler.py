@@ -22,11 +22,6 @@ import io
 from PIL import Image, UnidentifiedImageError
 
 import requests
-
-# see PyGObject API ref for Gio.Settings or >>> help(Gio.Settings) in REPL
-from gi.repository import Gio
-
-
 class ImageDownloadError(Exception):
     """
     Raised when an image download is unsuccessful.
