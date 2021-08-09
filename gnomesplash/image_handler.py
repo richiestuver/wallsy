@@ -14,8 +14,6 @@ desktop environment use. Other analogous use cases are welcome
 but this is not intended to be a comprehensive photo manipulation program.
 """
 
-import os
-import os.path
 from pathlib import Path
 import io
 from PIL import Image, UnidentifiedImageError
@@ -44,15 +42,19 @@ def download_image(url: str, file_path: str):
         If file already exists, do not overwrite.
     """
 
-    destination_path = os.path.abspath(file_path)
+
+    destination_path = Path(file_path).expanduser().resolve()
 
     # prevent overwriting an existing file. this is a design decision to prevent unintentional deletions
-    if os.path.exists(destination_path):
-        raise FileExistsError(f"File already exists at {destination_path}.")
+    
+    if not destination_path.exists():
+        try:
+            destination_path.parent.mkdir(parents=True, exist_ok=True)
+        except FileExistsError:
+            raise FileExistsError(f"Error trying to create {str(destination_path)}.")
 
-    # make sure there is a valid directory path to prevent file not found errors on save later
-    if not os.path.exists(os.path.dirname(destination_path)):
-        os.makedirs(os.path.dirname(destination_path))
+    else:
+        raise FileExistsError(f"File already exists at {destination_path}.")
 
     # now for the good stuff. get the raw image content and use the imaging library to save to file.
     # two main error conditions: bad http request or trying to access something that's not an image.
