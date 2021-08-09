@@ -78,7 +78,9 @@ def update_wallpaper(img_path: str, options=None) -> None:
     try:
         wallpaper_location = Path(img_path).expanduser().resolve()
     except TypeError:
-        raise WallpaperUpdateError(f"Invalid parameter: {img_path} is not a valid Pathlike object.")
+        raise WallpaperUpdateError(
+            f"Invalid parameter: {img_path} is not a valid Pathlike object."
+        )
 
     # subsequent operations will fail if path does not exist or is not a file, so catch this.
     if not wallpaper_location.exists() or not wallpaper_location.is_file():
