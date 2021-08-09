@@ -15,10 +15,6 @@ https://github.com/GNOME/gsettings-desktop-schemas/blob/master/schemas/org.gnome
 
 from pathlib import Path
 import imghdr  # use to determine if image is valid
-import io
-from PIL import Image, UnidentifiedImageError
-
-import requests
 
 # see PyGObject API ref for Gio.Settings or >>> help(Gio.Settings) in REPL
 from gi.repository import Gio
