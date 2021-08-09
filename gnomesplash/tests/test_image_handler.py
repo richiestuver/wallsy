@@ -94,8 +94,8 @@ from image_handler import ImageDownloadError
         "https://images.unsplash.com/photo-1558328511-7d6490908755",
     ],
 )
-@unittest.mock.patch("wallpaper_handler.requests.models.Response", autospec=True)
-@unittest.mock.patch("wallpaper_handler.requests.get", autospec=True)
+@unittest.mock.patch("image_handler.requests.models.Response", autospec=True)
+@unittest.mock.patch("image_handler.requests.get", autospec=True)
 def test_download_image_success(
     mock_get,
     mock_response,
@@ -131,8 +131,8 @@ def test_download_image_success(
         "https://images.unsplash.com/photo-1558328511-7d6490908755",
     ],
 )
-@unittest.mock.patch("wallpaper_handler.requests.models.Response", autospec=True)
-@unittest.mock.patch("wallpaper_handler.requests.get", autospec=True)
+@unittest.mock.patch("image_handler.requests.models.Response", autospec=True)
+@unittest.mock.patch("image_handler.requests.get", autospec=True)
 def test_download_image_new_directory(
     mock_get, mock_response, tmp_path, test_image, img_url: str
 ):
@@ -165,8 +165,8 @@ def test_download_image_new_directory(
         "https://images.unsplash.com/photo-1558328511-7d6490908755",
     ],
 )
-@unittest.mock.patch("wallpaper_handler.requests.models.Response", autospec=True)
-@unittest.mock.patch("wallpaper_handler.requests.get", autospec=True)
+@unittest.mock.patch("image_handler.requests.models.Response", autospec=True)
+@unittest.mock.patch("image_handler.requests.get", autospec=True)
 def test_download_image_size_not_zero(
     mock_get, mock_response, tmp_path, test_image, img_url: str
 ):
@@ -194,8 +194,8 @@ def test_download_image_size_not_zero(
         "https://raw.githubusercontent.com/richiestuver/gnomesplash/master/README.md",
     ],
 )
-@unittest.mock.patch("wallpaper_handler.requests.models.Response", autospec=True)
-@unittest.mock.patch("wallpaper_handler.requests.get", autospec=True)
+@unittest.mock.patch("image_handler.requests.models.Response", autospec=True)
+@unittest.mock.patch("image_handler.requests.get", autospec=True)
 def test_download_image_invalid_failure(
     mock_get, mock_response, tmp_path, test_image, img_url: str
 ):
@@ -224,8 +224,8 @@ def test_download_image_invalid_failure(
         "https://images.unsplash.com/photo-1473081556163-2a17de81fc97",
     ],
 )
-@unittest.mock.patch("wallpaper_handler.requests.models.Response", autospec=True)
-@unittest.mock.patch("wallpaper_handler.requests.get", autospec=True)
+@unittest.mock.patch("image_handler.requests.models.Response", autospec=True)
+@unittest.mock.patch("image_handler.requests.get", autospec=True)
 def test_download_image_file_exists_failure(
     mock_get, mock_response, tmp_path, test_image, img_url: str
 ):
