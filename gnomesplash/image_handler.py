@@ -16,9 +16,11 @@ but this is not intended to be a comprehensive photo manipulation program.
 
 from pathlib import Path
 import io
-from PIL import Image, UnidentifiedImageError
 
+from PIL import Image, UnidentifiedImageError
 import requests
+
+
 class ImageDownloadError(Exception):
     """
     Raised when an image download is unsuccessful.
@@ -42,11 +44,10 @@ def download_image(url: str, file_path: str):
         If file already exists, do not overwrite.
     """
 
-
     destination_path = Path(file_path).expanduser().resolve()
 
     # prevent overwriting an existing file. this is a design decision to prevent unintentional deletions
-    
+
     if not destination_path.exists():
         try:
             destination_path.parent.mkdir(parents=True, exist_ok=True)
