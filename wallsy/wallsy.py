@@ -8,8 +8,8 @@ to auto update on a recurring interval.
 This module controls command line operations for interacting with the application.
 """
 
-from pathlib import Path
+import click
 
-
-if __name__ == "__main__":
-    pass
+@click.command()
+def cli():
+    click.echo("Hello, world.")
