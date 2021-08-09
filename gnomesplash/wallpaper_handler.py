@@ -13,8 +13,6 @@ More information on this schema can be found at:
 https://github.com/GNOME/gsettings-desktop-schemas/blob/master/schemas/org.gnome.desktop.background.gschema.xml.in 
 """
 
-import os
-import os.path
 from pathlib import Path
 import imghdr  # use to determine if image is valid
 import io
@@ -81,21 +79,24 @@ def update_wallpaper(img_path: str, options=None) -> None:
     # NOTE: os.path.exists accepts integers (open file descriptors). This won't catch
     # invalid types for our purposes. Additional check should be used.
 
-    if type(img_path) != str:
-        raise WallpaperUpdateError(f"Invalid parameter: {img_path} is not a string.")
+    try:
+        wallpaper_location = Path(img_path).expanduser().resolve()
+    except TypeError:
+        raise WallpaperUpdateError(f"Invalid parameter: {img_path} is not a valid Pathlike object.")
 
-    if not os.path.exists(img_path):
+    # subsequent operations will fail if path does not exist or is not a file, so catch this.
+    if not wallpaper_location.exists() or not wallpaper_location.is_file():
         raise WallpaperUpdateError(
             f"Invalid path provided for image location: {img_path} does not exist."
         )
 
     # what() returns None if no matching image type is determined for a given file path.
     # See list of valid image types at https://docs.python.org/3/library/imghdr.html
-    if imghdr.what(os.path.abspath(img_path)) is None:
+    if imghdr.what(wallpaper_location) is None:
         raise WallpaperUpdateError(
-            f"Invalid image type provided. {os.path.split(img_path)[-1]} is not a valid image."
+            f"Invalid image type provided. {wallpaper_location.name} is not a valid image."
         )
 
     # make sure to use the absolute path so resource is locatable when accessed from schema
     # XML schema is read directly, there is no path validation done by Gnome desktop
-    gnome_background_settings["picture-uri"] = os.path.abspath(img_path)
+    gnome_background_settings["picture-uri"] = str(wallpaper_location)
