@@ -10,6 +10,8 @@ This module controls command line operations for interacting with the applicatio
 
 import click
 
+import wallsy.image_handler as image_handler
+
 
 @click.version_option()  # reads version from setup.cfg metadata
 @click.group(
@@ -53,23 +55,48 @@ def cli():  # named cli by convention in the click docs
 
 
 @cli.command()
-def new(file, uri):
+@click.option("--file", "-f")
+@click.option("--url", "-u")
+def new(file, url):
     """
-    Retrieve a new image from either local filesystem or URI.
+    Retrieve a new image from either local filesystem or URL (must point directly to an accessible image resource).
     """
+
+    # Handle usage errors outside of the callback so that these are caught immediately on invocation.
+    # At least one (but not both) of --file or --url are required.
+
+    if file is None and url is None:
+        msg = """"new" requires either a file path or url pointing to an image. Please provide either --file or --url options. 
+        
+        file: wallsy new --file="/path/to/my/photo.jpg"
+        url:  wallsy new --url="https://www.example.com/myphoto.jpg"
+        """
+        raise click.UsageError(msg)
+
+    if file is not None and url is not None:
+        msg = """"new" received conflicting options: --file and --url. Please choose one option and try again. 
+        """
+
+        raise click.UsageError(msg)
 
     def _get_new_image():
         """
         Callback for the new image subcommand.
         """
 
-        return "This is new"
+        if url:
+            dest_path = "~/wallsy_test/my_img.jpg"
+            try:
+                image_handler.download_image(url, file_path=dest_path)
+            except image_handler.ImageDownloadError as error:
+                raise click.ClickException(str(error))
+
+        return file or dest_path
 
     return _get_new_image
 
 
 @cli.command(name="random")
-@click.option("--source", "-s")
 @click.option("--query", "-q")
 def random(source, query):
     """
@@ -105,7 +132,7 @@ def update_desktop_background():
         """Callback for the background subcommand"""
         return "background "
 
-    return _update_background
+    return _update_desktop_background
 
 
 @cli.result_callback()
@@ -145,4 +172,5 @@ def process_pipeline(callbacks):
 
     for callback in callbacks:
         print(callback.__name__)
-        print(callback())
+        x = callback()
+        print(x)
