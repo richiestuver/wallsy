@@ -196,11 +196,11 @@ def test_download_image_size_not_zero(
 )
 @unittest.mock.patch("image_handler.requests.models.Response", autospec=True)
 @unittest.mock.patch("image_handler.requests.get", autospec=True)
-def test_download_image_invalid_failure(
+def test_download_image_bad_response(
     mock_get, mock_response, tmp_path, test_image, img_url: str
 ):
     """
-    Download image should fail if the target is not a valid url or is not an image. Should raise
+    Download image should fail if a bad response (e.g 404 error). Should raise
     an appropriate error (TBD) instead of failing silently or saving the file to filesystem.
     """
 
@@ -217,6 +217,20 @@ def test_download_image_invalid_failure(
         with pytest.raises(ImageDownloadError):
             download_image(img_url, file_path)
 
+
+@pytest.mark.parametrize("img_url", ["not-an-url", "www.missingschema.com", "https://hello.notaTLD"])
+def test_download_image_bad_request(tmp_path, test_image, img_url):
+    """
+    Verify that improper requests have errors handled correctly. The Requests library will
+    throw an error on the get method call and so errors will leak through if only checking
+    for raise_for_status() status code errors.  
+    """
+
+    file_name = os.path.basename(urlparse(img_url).path)
+    file_path = tmp_path / f"{file_name}.jpg"
+
+    with pytest.raises(ImageDownloadError):
+        download_image(img_url, file_path)
 
 @pytest.mark.parametrize(
     "img_url",
