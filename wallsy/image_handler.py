@@ -37,21 +37,22 @@ class ImageDownloadError(Exception):
 
     pass
 
-def validate_image(file_path: str) -> str:
+def validate_image(input) -> str:
     """
-    Determine whether a file specified at file_path is a valid image. Uses PIL to attempt to
-    open the file. The PIL method reads the content header to determine file type but doesn't
+    Determine whether input is a valid image. PIL open method accepts a Path object, string, or file object (buffered stream).
+    Uses PIL to attempt to open the file. The PIL method reads the content header to determine file type but doesn't
     actually load any of the contents in memory, so it should be safe to use as a validation method.
     See the PIL docs on identifying images for more info: https://pillow.readthedocs.io/en/stable/handbook/tutorial.html?highlight=identify#identify-image-files
     """
 
     try:
-        with Image.open(file_path) as image:
+        with Image.open(input) as image:
             
             return image.format
 
     except UnidentifiedImageError:
-        raise InvalidImageError(f"File path {file_path} does not appear to be an image.")
+        raise InvalidImageError(f"Input {str(input)} does not appear to be an image.")
+
 
     
 
