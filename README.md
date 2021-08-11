@@ -20,19 +20,19 @@ Wallsy is designed to chain commands together into powerful one-line expressions
 1) (Required) specify an input image using either 'new' or 'random' commands, e.g. 
 
 ```
-$ wallsy new --file="photo.jpg" [ADDITIONAL COMMANDS]
+wallsy new --file="photo.jpg" [ADDITIONAL COMMANDS]
 ```
 
 2) (Optional) apply desired image manipulations using 'effects' command, e.g. 
 
 ```
-$ wallsy [new | random] effects --blur=20 [ADDITIONAL COMMANDS]
+wallsy [new | random] effects --blur=20 [ADDITIONAL COMMANDS]
 ```
 
 3) (Optional) save image or set the resulting image as a new desktop background using 'save' or 'desktop' commands, e.g. 
 
 ```
-$ wallsy [new | random] save --name="myphoto" [ADDITIONAL COMMANDS]
+wallsy [new | random] save --name="myphoto" [ADDITIONAL COMMANDS]
 ```
 
 ## Examples:
