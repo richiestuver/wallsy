@@ -4,25 +4,36 @@ The best image modifier for custom desktop wallpapers and other creative uses.
 
 *** Software Under Construction! Stay tuned for updates.***
 ## TODO
-- [] Write filter effects handler
-- [] Write file handler
-- [] Write search query handler
-- [] Write scheduler
-- [] Write pipeline processing logic for CLI
-- [] Error handling on CLI 
-- [] Unit tests for the above
+- [ ] Write filter effects handler
+- [ ] Write file handler
+- [ ] Write search query handler
+- [ ] Write scheduler
+- [ ] Write pipeline processing logic for CLI
+- [ ] Error handling on CLI 
+- [ ] Unit tests for the above
 
 
 ## Usage:
 
 Wallsy is designed to chain commands together into powerful one-line expressions to collect, edit, and use images.
 
-1) (Required) specify an input image using either 'new' or 'random' commands (e.g. $ wallsy new --file="photo.jpg" ...)
+1) (Required) specify an input image using either 'new' or 'random' commands, e.g. 
 
-2) (Optional) apply desired image manipulations using 'effects' command (e.g. $ wallsy ... effects --blur=20 ...)
+```
+$ wallsy new --file="photo.jpg" [ADDITIONAL COMMANDS]
+```
 
-3) (Optional) save image or set the resulting image as a new desktop background using 'save' or 'desktop' commands
-(e.g. $ wallsy ... save --name="myphoto" ...)
+2) (Optional) apply desired image manipulations using 'effects' command, e.g. 
+
+```
+$ wallsy [new | random] effects --blur=20 [ADDITIONAL COMMANDS]
+```
+
+3) (Optional) save image or set the resulting image as a new desktop background using 'save' or 'desktop' commands, e.g. 
+
+```
+$ wallsy [new | random] save --name="myphoto" [ADDITIONAL COMMANDS]
+```
 
 ## Examples:
 
