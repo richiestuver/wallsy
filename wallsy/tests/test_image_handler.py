@@ -219,13 +219,15 @@ def test_download_image_bad_response(
             download_image(img_url, file_path)
 
 
-@pytest.mark.parametrize("img_url", ["not-an-url", "www.missingschema.com", "https://hello.notaTLD"])
+@pytest.mark.parametrize(
+    "img_url", ["not-an-url", "www.missingschema.com", "https://hello.notaTLD"]
+)
 @unittest.mock.patch("image_handler.requests.get", autospec=True)
 def test_download_image_bad_request(mock_get, tmp_path, test_image, img_url):
     """
     Verify that improper requests have errors handled correctly. The Requests library will
     throw an error on the get method call and so errors will leak through if only checking
-    for raise_for_status() status code errors.  
+    for raise_for_status() status code errors.
     """
 
     file_name = os.path.basename(urlparse(img_url).path)
@@ -235,6 +237,7 @@ def test_download_image_bad_request(mock_get, tmp_path, test_image, img_url):
 
     with pytest.raises(ImageDownloadError):
         download_image(img_url, file_path)
+
 
 @pytest.mark.parametrize(
     "img_url",

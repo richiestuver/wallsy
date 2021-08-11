@@ -98,7 +98,7 @@ def new(file, url):
 
 @cli.command(name="random")
 @click.option("--query", "-q")
-def random(source, query):
+def random(query):
     """
     Generate a random image from source (default: Unsplash)
     """

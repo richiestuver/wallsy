@@ -59,14 +59,14 @@ def download_image(url: str, file_path: str):
 
     # now for the good stuff. get the raw image content and use the imaging library to save to file.
     # two main error conditions: bad http request or trying to access something that's not an image.
-    
+
     try:
         r = requests.get(url)
-    
+
     except requests.exceptions.RequestException as error:
         raise ImageDownloadError(str(error))
-    
-    # successful request but received a bad response from the server. 
+
+    # successful request but received a bad response from the server.
     try:
         r.raise_for_status()
     except requests.exceptions.HTTPError:
@@ -74,7 +74,7 @@ def download_image(url: str, file_path: str):
             f"Download error: something went wrong trying to access {url} (status code {r.status_code})"
         )
 
-    # successful request but did not get back image data as the response. 
+    # successful request but did not get back image data as the response.
     try:
         with Image.open(io.BytesIO(r.content)) as image:
             image.save(destination_path)
