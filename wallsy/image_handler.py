@@ -21,12 +21,39 @@ from PIL import Image, UnidentifiedImageError
 import requests
 
 
+class InvalidImageError(Exception):
+    """
+    Raised when a provided binary input file is not an image. Wrapper around the PIL 
+    UnidentifiedImageError for better identification of errors during debugging
+    and custom error messaging. 
+    """
+
+    pass
+
 class ImageDownloadError(Exception):
     """
     Raised when an image download is unsuccessful.
     """
 
     pass
+
+def validate_image(file_path: str) -> str:
+    """
+    Determine whether a file specified at file_path is a valid image. Uses PIL to attempt to
+    open the file. The PIL method reads the content header to determine file type but doesn't
+    actually load any of the contents in memory, so it should be safe to use as a validation method.
+    See the PIL docs on identifying images for more info: https://pillow.readthedocs.io/en/stable/handbook/tutorial.html?highlight=identify#identify-image-files
+    """
+
+    try:
+        with Image.open(file_path) as image:
+            
+            return image.format
+
+    except UnidentifiedImageError:
+        raise InvalidImageError(f"File path {file_path} does not appear to be an image.")
+
+    
 
 
 def download_image(url: str, file_path: str):
