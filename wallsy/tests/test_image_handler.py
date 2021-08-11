@@ -78,6 +78,7 @@ from itertools import cycle
 
 import pytest
 from requests import HTTPError
+from requests.exceptions import RequestException
 from gi.repository import Gio  # see PyObject API
 
 # following entities are tested in this module:
@@ -219,7 +220,8 @@ def test_download_image_bad_response(
 
 
 @pytest.mark.parametrize("img_url", ["not-an-url", "www.missingschema.com", "https://hello.notaTLD"])
-def test_download_image_bad_request(tmp_path, test_image, img_url):
+@unittest.mock.patch("image_handler.requests.get", autospec=True)
+def test_download_image_bad_request(mock_get, tmp_path, test_image, img_url):
     """
     Verify that improper requests have errors handled correctly. The Requests library will
     throw an error on the get method call and so errors will leak through if only checking
@@ -228,6 +230,8 @@ def test_download_image_bad_request(tmp_path, test_image, img_url):
 
     file_name = os.path.basename(urlparse(img_url).path)
     file_path = tmp_path / f"{file_name}.jpg"
+
+    mock_get.side_effect = RequestException
 
     with pytest.raises(ImageDownloadError):
         download_image(img_url, file_path)
