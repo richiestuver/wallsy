@@ -8,6 +8,8 @@ to auto update on a recurring interval.
 This module controls command line operations for interacting with the application.
 """
 
+from shutil import copy
+
 import click
 
 import wallsy.image_handler as image_handler
@@ -57,7 +59,8 @@ def cli():  # named cli by convention in the click docs
 @cli.command()
 @click.option("--file", "-f")
 @click.option("--url", "-u")
-def new(file, url):
+@click.pass_context
+def new(ctx, file, url):
     """
     Retrieve a new image from either local filesystem or URL (must point directly to an accessible image resource).
     """
@@ -84,14 +87,42 @@ def new(file, url):
         Callback for the new image subcommand.
         """
 
-        if url:
-            dest_path = "~/wallsy_test/my_img.jpg"
+        """set destination path for where the image should be stored. 
+        images are intended to be modified so input paths shouldn't be 
+        used as the destination path as doing so will modify the original input.
+        in the future maybe allow this to be specified as an option to 
+        modify the input file. e.g. --no-save"""
+
+        dest_path = "~/wallsy/my_img.jpg"
+
+        """
+        FILE option
+        """
+        if file:
+            # validate that the input file is a valid image. 
             try:
-                image_handler.download_image(url, file_path=dest_path)
+                image_handler.validate_image(file)
+            
+            except image_handler.InvalidImageError as error:
+                raise click.BadParameter(str(error))
+            
+            # copy the file contents to destination 
+            copy(file, dest_path)
+
+        """
+        URL option
+        """
+        if url:
+            try:
+                image_handler.download_image(url=url, file_path=dest_path)
             except image_handler.ImageDownloadError as error:
                 raise click.ClickException(str(error))
 
-        return file or dest_path
+        # if we get this far, we should have a validated image. make the path available to other 
+        # subcommands by storing in the click context's object attribute (which is designed for this purpose)
+        
+        ctx.obj = dest_path
+        return dest_path
 
     return _get_new_image
 
@@ -123,14 +154,18 @@ def apply_effects():
 
 
 @cli.command(name="desktop")
-def update_desktop_background():
+@click.pass_context
+def update_desktop_background(ctx):
     """
     Update the desktop background with the specified image.
     """
 
     def _update_desktop_background():
         """Callback for the background subcommand"""
-        return "background "
+
+
+
+        return "background"
 
     return _update_desktop_background
 
