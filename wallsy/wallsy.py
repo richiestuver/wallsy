@@ -16,6 +16,23 @@ import click
 import wallsy.image_handler as image_handler
 import wallsy.wallpaper_handler as wallpaper_handler
 
+"""
+Wallsy CLI
+
+This module contains the Wallsy CLI app specification and command callback function definitions.
+
+The app 
+
+"""
+
+# TODO: Look for a Wallsy folder on the ~ directory to save and retrieve wallsy images
+# TODO: Save wallpapers to the default folder for the Gnome desktop
+# TODO: refactor occurrences of os.path to pathlib.Path across app
+# TODO: notifications to user about save and retrieval
+# TODO: unit testing
+# TODO: random and effects
+# FUTURE: Support streams of input and not single images. 
+
 
 @click.version_option()  # reads version from setup.cfg metadata
 @click.group(
@@ -59,10 +76,10 @@ def cli():  # named cli by convention in the click docs
 
 
 @cli.command()
-@click.option("--file", "-f")
+@click.option("--file", "-f", type=click.Path(), help="Load an image from file path. Ensures image is valid and stores a copy of the image in the Wallsy folder.")
 @click.option("--url", "-u")
-@click.pass_context
-def load(ctx, file, url):
+@click.option("--no-save", help="Do not store the provided image in the Wallsy folder. ")  
+def load(file, url, no_save):
     """
     Retrieve a new image from either local filesystem or URL (must point directly to an accessible image resource).
     """
@@ -101,15 +118,19 @@ def load(ctx, file, url):
         FILE option
         """
         if file:
-            # validate that the input file is a valid image. 
+            # validate that the input file is a valid image.
             try:
                 image_handler.validate_image(file)
-            
+
             except image_handler.InvalidImageError as error:
                 raise click.BadParameter(str(error))
-            
-            # copy the file contents to destination 
-            copyfile(file, dest_path)
+
+            # copy the file contents to destination
+            try:
+                copyfile(file, dest_path)
+                click.echo(f"Copied {file} to {dest_path}")
+            except Exception as error:
+                raise click.ClickException(error)
 
         """
         URL option
@@ -120,10 +141,9 @@ def load(ctx, file, url):
             except image_handler.ImageDownloadError as error:
                 raise click.ClickException(str(error))
 
-        # if we get this far, we should have a validated image. make the path available to other 
+        # if we get this far, we should have a validated image. make the path available to other
         # subcommands by storing in the click context's object attribute (which is designed for this purpose)
-        
-        ctx.obj = dest_path
+
         return dest_path
 
     return _load_image
@@ -172,9 +192,15 @@ def update_desktop_background():
         # desktop command should be passed in a filename from a prior subcommand.
 
         if filename is None:
-            raise click.UsageError("No valid image provided. Did you run 'load' or 'random' to source an image?")
+            raise click.UsageError(
+                "No valid image provided. Did you run 'load' or 'random' to source an image?"
+            )
 
-        wallpaper_handler.update_wallpaper(img_path=filename)
+        try:
+            wallpaper_handler.update_wallpaper(img_path=filename)
+            click.echo(f"Desktop wallpaper updated to {filename}")
+        except Exception as error:
+            raise click.ClickException(str(error))
 
         return filename
 

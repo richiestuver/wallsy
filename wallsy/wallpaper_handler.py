@@ -27,6 +27,14 @@ class WallpaperUpdateError(Exception):
 
     pass
 
+def get_wallpaper_location() -> Path:
+    """
+    Read the target wallpaper location from config. For Gnome DE this should be 
+    set to "~/.local/share/backgrounds" if it's desirable that wallpapers appear
+    in the desktop wallpaper GUI in Gnome settings.
+    """
+
+    pass
 
 def set_wallpaper_location(file_path: str = "~/.local/share/backgrounds"):
     """

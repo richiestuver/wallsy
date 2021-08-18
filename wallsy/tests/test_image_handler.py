@@ -88,7 +88,6 @@ from image_handler import ImageDownloadError
 from image_handler import InvalidImageError
 
 
-
 @pytest.mark.parametrize(
     "img_url",
     [
@@ -274,6 +273,7 @@ def test_download_image_file_exists_failure(
         with pytest.raises(FileExistsError):
             download_image(img_url, file_path)
 
+
 def test_validate_image_success(test_image):
     """
     Verify that wrapper function validate_image returns a valid string format indicator
@@ -283,11 +283,12 @@ def test_validate_image_success(test_image):
     assert type(img_format) == str
     assert img_format is not None
 
+
 @pytest.mark.parametrize("txt_path", list(Path().rglob("test_data/**/*.txt")))
 def test_validate_image_failure(txt_path):
-    
-    """Validate that invalid binary data (e.g. text files) are correctly caught and 
-    raise an exception in the validate image wrapper. """
+
+    """Validate that invalid binary data (e.g. text files) are correctly caught and
+    raise an exception in the validate image wrapper."""
 
     with pytest.raises(InvalidImageError):
         validate_image(txt_path)

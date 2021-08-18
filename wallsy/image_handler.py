@@ -23,12 +23,13 @@ import requests
 
 class InvalidImageError(Exception):
     """
-    Raised when a provided binary input file is not an image. Wrapper around the PIL 
+    Raised when a provided binary input file is not an image. Wrapper around the PIL
     UnidentifiedImageError for better identification of errors during debugging
-    and custom error messaging. 
+    and custom error messaging.
     """
 
     pass
+
 
 class ImageDownloadError(Exception):
     """
@@ -36,6 +37,7 @@ class ImageDownloadError(Exception):
     """
 
     pass
+
 
 def validate_image(input) -> str:
     """
@@ -47,14 +49,11 @@ def validate_image(input) -> str:
 
     try:
         with Image.open(input) as image:
-            
+
             return image.format
 
     except UnidentifiedImageError:
         raise InvalidImageError(f"Input {str(input)} does not appear to be an image.")
-
-
-    
 
 
 def download_image(url: str, file_path: str):
