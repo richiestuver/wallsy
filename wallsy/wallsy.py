@@ -8,7 +8,8 @@ to auto update on a recurring interval.
 This module controls command line operations for interacting with the application.
 """
 
-from shutil import copy
+from pathlib import Path
+from shutil import copyfile
 
 import click
 
@@ -42,7 +43,7 @@ def cli():  # named cli by convention in the click docs
 
     2) Add a blur to an image and set it as the desktop background
 
-        $ wallsy new --file="my-wallpaper.jpg" effects --blur=20 background
+        $ wallsy load --file="my-wallpaper.jpg" effects --blur=20 background
 
     3) Convert random "mountain" image to grayscale and save as "myphoto" to the 'documents' directory
 
@@ -60,7 +61,7 @@ def cli():  # named cli by convention in the click docs
 @click.option("--file", "-f")
 @click.option("--url", "-u")
 @click.pass_context
-def new(ctx, file, url):
+def load(ctx, file, url):
     """
     Retrieve a new image from either local filesystem or URL (must point directly to an accessible image resource).
     """
@@ -69,22 +70,22 @@ def new(ctx, file, url):
     # At least one (but not both) of --file or --url are required.
 
     if file is None and url is None:
-        msg = """"new" requires either a file path or url pointing to an image. Please provide either --file or --url options. 
+        msg = """"load" requires either a file path or url pointing to an image. Please provide either --file or --url options. 
         
-        file: wallsy new --file="/path/to/my/photo.jpg"
-        url:  wallsy new --url="https://www.example.com/myphoto.jpg"
+        file: wallsy load --file="/path/to/my/photo.jpg"
+        url:  wallsy load --url="https://www.example.com/myphoto.jpg"
         """
         raise click.UsageError(msg)
 
     if file is not None and url is not None:
-        msg = """"new" received conflicting options: --file and --url. Please choose one option and try again. 
+        msg = """"load" received conflicting options: --file and --url. Please choose one option and try again. 
         """
 
         raise click.UsageError(msg)
 
-    def _get_new_image():
+    def _load_image(*args, **kwargs):
         """
-        Callback for the new image subcommand.
+        Callback for the load image subcommand.
         """
 
         """set destination path for where the image should be stored. 
@@ -93,7 +94,7 @@ def new(ctx, file, url):
         in the future maybe allow this to be specified as an option to 
         modify the input file. e.g. --no-save"""
 
-        dest_path = "~/wallsy/my_img.jpg"
+        dest_path = Path("~/wallsy/my_img.jpg").expanduser()
 
         """
         FILE option
@@ -107,7 +108,7 @@ def new(ctx, file, url):
                 raise click.BadParameter(str(error))
             
             # copy the file contents to destination 
-            copy(file, dest_path)
+            copyfile(file, dest_path)
 
         """
         URL option
@@ -124,7 +125,7 @@ def new(ctx, file, url):
         ctx.obj = dest_path
         return dest_path
 
-    return _get_new_image
+    return _load_image
 
 
 @cli.command(name="random")
@@ -146,26 +147,31 @@ def apply_effects():
     Apply one or more effects to the image.
     """
 
-    def _apply_effects():
+    def _apply_effects(filename, *args, **kwargs):
         """Callback for the effect subcommand"""
-        return "effect "
+        return filename
 
     return _apply_effects
 
 
 @cli.command(name="desktop")
-@click.pass_context
-def update_desktop_background(ctx):
+def update_desktop_background():
     """
     Update the desktop background with the specified image.
     """
 
-    def _update_desktop_background():
+    def _update_desktop_background(filename, *args, **kwargs):
         """Callback for the background subcommand"""
 
+        # desktop command should be passed in a filename from a prior subcommand.
+        if filename is None:
+            raise click.UsageError("No valid image provided. Did you run 'load' or 'random' to source an image?")
 
+        # desktop command should error out if there is not a valid filepath saved in the Click CLI object
+        # if ctx.obj is None:
+        #     raise click.UsageError("No valid image provided. Did you run 'load' or 'random' to source an image?")
 
-        return "background"
+        return filename
 
     return _update_desktop_background
 
@@ -185,13 +191,13 @@ def process_pipeline(callbacks):
     """
 
     """
-    check for incompatible subcommand combinations. incompatible subcommands are the following:
-        RANDOM and NEW:
-            both subcommands are designed to provide a filepath and ensure that a valid
-            image exists at that path.
+    Subcommand clobbering. If conflicting subcommands are provided, e.g. "load" and "random" which
+    both output a filepath pointing toward a valid image, the one specified later in the pipeline
+    will overwrite the results of the previous. 
+    
+    Theoretically should be able to do cool things like stream of multiple images, but save 
+    that for a later date. 
     """
-
-    "TODO: perform subcommand compatibility check"
 
     """
     Pipeline ordering
@@ -203,9 +209,9 @@ def process_pipeline(callbacks):
     execute successfully. 
     """
 
-    "TODO: setup pipeline ordering in an iterable then use this to execute callback functions in specified order"
+    filename = None
 
     for callback in callbacks:
         print(callback.__name__)
-        x = callback()
-        print(x)
+        filename = callback(filename)
+        print(filename)
