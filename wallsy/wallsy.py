@@ -14,6 +14,7 @@ from shutil import copyfile
 import click
 
 import wallsy.image_handler as image_handler
+import wallsy.wallpaper_handler as wallpaper_handler
 
 
 @click.version_option()  # reads version from setup.cfg metadata
@@ -160,16 +161,20 @@ def update_desktop_background():
     Update the desktop background with the specified image.
     """
 
+    ###
+    # perform any checks that should fail the pipeline entirely here, before
+    # the inner function definition.
+    ###
+
     def _update_desktop_background(filename, *args, **kwargs):
         """Callback for the background subcommand"""
 
         # desktop command should be passed in a filename from a prior subcommand.
+
         if filename is None:
             raise click.UsageError("No valid image provided. Did you run 'load' or 'random' to source an image?")
 
-        # desktop command should error out if there is not a valid filepath saved in the Click CLI object
-        # if ctx.obj is None:
-        #     raise click.UsageError("No valid image provided. Did you run 'load' or 'random' to source an image?")
+        wallpaper_handler.update_wallpaper(img_path=filename)
 
         return filename
 
@@ -209,9 +214,15 @@ def process_pipeline(callbacks):
     execute successfully. 
     """
 
+    """
+    all callbacks either act on a filename, return a filename, or both. 
+    callbacks that return a filename but ignore filenames provided as input 
+    are generally those used to source an image for processing, e.g. "load" or "random"
+    """
+
     filename = None
 
     for callback in callbacks:
-        print(callback.__name__)
+        print(callback.__name__, end=" ")
         filename = callback(filename)
         print(filename)
