@@ -107,7 +107,7 @@ def download_image(url: str, file_path: str) -> Path:
 
             print(image.format)
             if destination_path.suffix == "":
-                destination_path = f"{destination_path}.{image.format.lower()}"
+                destination_path = Path(f"{destination_path}.{image.format.lower()}")
             print(destination_path)
             image.save(destination_path)
 

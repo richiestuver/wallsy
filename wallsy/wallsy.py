@@ -33,7 +33,6 @@ The app
 
 """
 
-# TODO: Look for a Wallsy folder on the ~ directory to save and retrieve wallsy images
 # TODO: Save wallpapers to the default folder for the Gnome desktop
 # TODO: refactor occurrences of os.path to pathlib.Path across app
 # TODO: notifications to user about save and retrieval
@@ -188,6 +187,7 @@ def load_file(file=None, url=None) -> Path:
             dest_path = image_handler.download_image(
                 url=url, file_path=dest_dir / file_name
             )
+            print(type(dest_path))
         except image_handler.ImageDownloadError as error:
             raise click.ClickException(str(error))
         except image_handler.InvalidImageError as error:
@@ -256,11 +256,12 @@ def update_desktop_wallpaper():
                 "Update desktop failed: No valid image provided. Did you run 'load' or 'random' to source an image?"
             )
 
-        try:
-            wallpaper_handler.update_wallpaper(img_path=filename)
-            click.echo(f"Desktop wallpaper updated to {filename}")
-        except Exception as error:
-            raise click.ClickException(str(error))
+        
+        wallpaper_dir = Path(os.getenv("WALLSY_WALLPAPER_DIR"))
+        shutil.copyfile(filename, wallpaper_dir / filename.name)
+        click.echo(f"Added a copy of {filename.name} to {wallpaper_dir}")
+        wallpaper_handler.update_wallpaper(img_path=wallpaper_dir / filename.name)
+        click.echo(f"Desktop wallpaper updated to {wallpaper_dir / filename.name}")
 
         return filename
 
