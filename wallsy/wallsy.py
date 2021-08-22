@@ -5,9 +5,16 @@ wallsy allows users to refresh their wallpaper with random photos from Unsplash
 that can be filtered by curated topics. Users can also schedule wallpapers
 to auto update on a recurring interval. 
 
-This module controls command line operations for interacting with the application.
+This module controls command line "routes" for interacting with the application.
 """
 
+import os
+import sys
+import json
+import shutil
+from urllib.parse import urlparse
+from pathlib import Path
+from stat import S_ISFIFO
 from pathlib import Path
 from shutil import copyfile
 
@@ -15,6 +22,7 @@ import click
 
 import wallsy.image_handler as image_handler
 import wallsy.wallpaper_handler as wallpaper_handler
+import wallsy.utils as utils
 
 """
 Wallsy CLI
@@ -31,14 +39,22 @@ The app
 # TODO: notifications to user about save and retrieval
 # TODO: unit testing
 # TODO: random and effects
-# FUTURE: Support streams of input and not single images. 
+# FUTURE: Support streams of input and not single images.
 
 
 @click.version_option()  # reads version from setup.cfg metadata
 @click.group(
     chain=True
 )  # default behavior is to pass --help automatically if no subcommand provided
-def cli():  # named cli by convention in the click docs
+@click.pass_context
+@click.option(
+    "--file",
+    "-f",
+    type=click.Path(path_type=Path),  # make sure that file paths are always Path objects. 
+    help="Load an image from file path. Ensures image is valid and stores a copy of the image in the Wallsy folder.",
+)
+@click.option("--url", "-u")
+def cli(ctx, file, url):  # named cli by convention in the click docs
     """
     The best image modifier for custom wallpapers.
 
@@ -60,7 +76,6 @@ def cli():  # named cli by convention in the click docs
         $ wallsy random background
 
     2) Add a blur to an image and set it as the desktop background
-
         $ wallsy load --file="my-wallpaper.jpg" effects --blur=20 background
 
     3) Convert random "mountain" image to grayscale and save as "myphoto" to the 'documents' directory
@@ -72,23 +87,52 @@ def cli():  # named cli by convention in the click docs
     $ wallsy background --help
     """
 
-    pass
+    """
+    INVOCATION METHOD 1: Receive a file path through standard input as part of a pipeline
+                         Note that 'file' argument takes precedence over standard input
+    
+    Support receiving a file path from standard input instead of as a command line argument. This is really
+    cool and delves a bit deep into the Python standard library. The OS module allows us to query a file descriptor
+    and return information from the operating system about that file, such as ownership, size, etc. We can use the 
+    stat module to deconstruct and query the resulting stat object that os.stat provides, and in our case use the IS_FIFO
+    method to determine if the file descriptor is a UNIX pipe or not. Major kudos to the following SO article and the 
+    Python OS and Stat module documentation:
 
+    https://stackoverflow.com/questions/35247817/is-there-a-way-for-a-python-script-to-know-if-it-is-being-piped-to
+    https://docs.python.org/3/library/stat.html
+    https://docs.python.org/3/library/os.html#os.stat_result
+    """
 
-@cli.command()
-@click.option("--file", "-f", type=click.Path(), help="Load an image from file path. Ensures image is valid and stores a copy of the image in the Wallsy folder.")
-@click.option("--url", "-u")
-@click.option("--no-save", help="Do not store the provided image in the Wallsy folder. ")  
-def load(file, url, no_save):
+    settings = utils.init()
+
+    # Check if wallsy is being used as part of a command pipeline, by checking if
+    # there is a value for standard input. 
+
+    try: 
+        file = utils.get_stdin()
+
+    except OSError:
+        pass
+
+    ### If standard input is not part of a pipe, path must be specified by user in file or url option
+    dest_path = load_file(file, url)
+
+    # make dest_path available to other commands using the context object.
+    # does not appear that return value of group function is available in return_callback
+    ctx.obj = dest_path
+    return dest_path
+
+def load_file(file=None, url=None) -> Path:
     """
     Retrieve a new image from either local filesystem or URL (must point directly to an accessible image resource).
     """
 
-    # Handle usage errors outside of the callback so that these are caught immediately on invocation.
-    # At least one (but not both) of --file or --url are required.
+    
 
+    # Catch usage errors immediately on invocation.
+    # At least one (but not both) of --file or --url are required.
     if file is None and url is None:
-        msg = """"load" requires either a file path or url pointing to an image. Please provide either --file or --url options. 
+        msg = """Wallsy requires either a file path or url pointing to an image. Please provide either --file or --url options. 
         
         file: wallsy load --file="/path/to/my/photo.jpg"
         url:  wallsy load --url="https://www.example.com/myphoto.jpg"
@@ -96,58 +140,69 @@ def load(file, url, no_save):
         raise click.UsageError(msg)
 
     if file is not None and url is not None:
-        msg = """"load" received conflicting options: --file and --url. Please choose one option and try again. 
+        msg = """Wallsy received conflicting options: --file and --url. Please choose one option and try again. 
         """
 
         raise click.UsageError(msg)
 
-    def _load_image(*args, **kwargs):
-        """
-        Callback for the load image subcommand.
-        """
+    """set destination path for where the image should be stored. 
+    images are intended to be modified so input paths shouldn't be 
+    used as the destination path as doing so will modify the original input.
+    in the future maybe allow this to be specified as an option to 
+    modify the input file. e.g. --no-save"""
 
-        """set destination path for where the image should be stored. 
-        images are intended to be modified so input paths shouldn't be 
-        used as the destination path as doing so will modify the original input.
-        in the future maybe allow this to be specified as an option to 
-        modify the input file. e.g. --no-save"""
+    dest_dir = Path(os.environ["WALLSY_MEDIA_DIR"]) 
 
-        dest_path = Path("~/wallsy/my_img.jpg").expanduser()
+    """
+    FILE option
+    """
+    if file:
 
-        """
-        FILE option
-        """
-        if file:
-            # validate that the input file is a valid image.
-            try:
-                image_handler.validate_image(file)
+        # if file is not a Path, (can also be str or TextIOBuffer), convert to Path
+        file = Path(file)
+        dest_path = dest_dir / file.name
 
-            except image_handler.InvalidImageError as error:
-                raise click.BadParameter(str(error))
+        # validate that the input file is a valid image.
+        try:
+            image_handler.validate_image(file)
 
-            # copy the file contents to destination
-            try:
-                copyfile(file, dest_path)
-                click.echo(f"Copied {file} to {dest_path}")
-            except Exception as error:
-                raise click.ClickException(error)
+        except image_handler.InvalidImageError as error:
+            raise click.BadParameter(str(error))
 
-        """
-        URL option
-        """
-        if url:
-            try:
-                image_handler.download_image(url=url, file_path=dest_path)
-            except image_handler.ImageDownloadError as error:
-                raise click.ClickException(str(error))
+        # copy the file contents to destination
+        try:
+            copyfile(file, dest_path)
+            click.echo(f"Copied {file.name} to {dest_path}")
+        except Exception as error:
+            raise click.ClickException(error)
 
-        # if we get this far, we should have a validated image. make the path available to other
-        # subcommands by storing in the click context's object attribute (which is designed for this purpose)
+    """
+    URL option
+    """
+    if url:
+        
+        file_name = Path(urlparse(url).path).name
 
-        return dest_path
+        try:
+            dest_path = image_handler.download_image(url=url, file_path=dest_dir / file_name)
+        except image_handler.ImageDownloadError as error:
+            raise click.ClickException(str(error))
+        except image_handler.InvalidImageError as error:
+            raise click.BadParameter(str(error))
 
-    return _load_image
+    # if we get this far, we should have a validated image. make the path available to other
+    # subcommands by storing in the click context's object attribute (which is designed for this purpose)
 
+    return dest_path
+
+@cli.command()
+def dummy():
+    """Dummy command for testing"""
+
+    def _dummy(*args, **kwargs):
+        return args, kwargs
+
+    return _dummy
 
 @cli.command(name="random")
 @click.option("--query", "-q")
@@ -176,7 +231,7 @@ def apply_effects():
 
 
 @cli.command(name="desktop")
-def update_desktop_background():
+def update_desktop_wallpaper():
     """
     Update the desktop background with the specified image.
     """
@@ -186,14 +241,14 @@ def update_desktop_background():
     # the inner function definition.
     ###
 
-    def _update_desktop_background(filename, *args, **kwargs):
+    def _update_desktop_wallpaper(filename, *args, **kwargs):
         """Callback for the background subcommand"""
 
         # desktop command should be passed in a filename from a prior subcommand.
 
         if filename is None:
             raise click.UsageError(
-                "No valid image provided. Did you run 'load' or 'random' to source an image?"
+                "Update desktop failed: No valid image provided. Did you run 'load' or 'random' to source an image?"
             )
 
         try:
@@ -204,11 +259,12 @@ def update_desktop_background():
 
         return filename
 
-    return _update_desktop_background
+    return _update_desktop_wallpaper
 
 
 @cli.result_callback()
-def process_pipeline(callbacks):
+@click.pass_context
+def process_pipeline(ctx, callbacks, *args, **kwargs):
     """
     The result_callback decorator supplies this function with an argument containing all of the return values from
     the invoked subcommands. By returning an inner function from each subcommand, we can control the order of execution
@@ -246,9 +302,9 @@ def process_pipeline(callbacks):
     are generally those used to source an image for processing, e.g. "load" or "random"
     """
 
-    filename = None
+    filename = ctx.obj
 
     for callback in callbacks:
-        print(callback.__name__, end=" ")
+        # print(callback.__name__)
         filename = callback(filename)
-        print(filename)
+        # print(filename)
