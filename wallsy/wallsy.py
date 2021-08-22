@@ -50,7 +50,9 @@ The app
 @click.option(
     "--file",
     "-f",
-    type=click.Path(path_type=Path),  # make sure that file paths are always Path objects. 
+    type=click.Path(
+        path_type=Path
+    ),  # make sure that file paths are always Path objects.
     help="Load an image from file path. Ensures image is valid and stores a copy of the image in the Wallsy folder.",
 )
 @click.option("--url", "-u")
@@ -106,9 +108,9 @@ def cli(ctx, file, url):  # named cli by convention in the click docs
     settings = utils.init()
 
     # Check if wallsy is being used as part of a command pipeline, by checking if
-    # there is a value for standard input. 
+    # there is a value for standard input.
 
-    try: 
+    try:
         file = utils.get_stdin()
 
     except OSError:
@@ -122,12 +124,11 @@ def cli(ctx, file, url):  # named cli by convention in the click docs
     ctx.obj = dest_path
     return dest_path
 
+
 def load_file(file=None, url=None) -> Path:
     """
     Retrieve a new image from either local filesystem or URL (must point directly to an accessible image resource).
     """
-
-    
 
     # Catch usage errors immediately on invocation.
     # At least one (but not both) of --file or --url are required.
@@ -151,7 +152,7 @@ def load_file(file=None, url=None) -> Path:
     in the future maybe allow this to be specified as an option to 
     modify the input file. e.g. --no-save"""
 
-    dest_dir = Path(os.environ["WALLSY_MEDIA_DIR"]) 
+    dest_dir = Path(os.environ["WALLSY_MEDIA_DIR"])
 
     """
     FILE option
@@ -180,11 +181,13 @@ def load_file(file=None, url=None) -> Path:
     URL option
     """
     if url:
-        
+
         file_name = Path(urlparse(url).path).name
 
         try:
-            dest_path = image_handler.download_image(url=url, file_path=dest_dir / file_name)
+            dest_path = image_handler.download_image(
+                url=url, file_path=dest_dir / file_name
+            )
         except image_handler.ImageDownloadError as error:
             raise click.ClickException(str(error))
         except image_handler.InvalidImageError as error:
@@ -195,6 +198,7 @@ def load_file(file=None, url=None) -> Path:
 
     return dest_path
 
+
 @cli.command()
 def dummy():
     """Dummy command for testing"""
@@ -203,6 +207,7 @@ def dummy():
         return args, kwargs
 
     return _dummy
+
 
 @cli.command(name="random")
 @click.option("--query", "-q")
