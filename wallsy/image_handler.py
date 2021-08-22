@@ -56,7 +56,7 @@ def validate_image(input) -> str:
         raise InvalidImageError(f"Input {str(input)} does not appear to be an image.")
 
 
-def download_image(url: str, file_path: str):
+def download_image(url: str, file_path: str) -> Path:
     """
         Download an image at specified url. This is an API agnostic function that does not
         take an API key for a particular service. Expectation is that resource is generally
@@ -104,9 +104,16 @@ def download_image(url: str, file_path: str):
     # successful request but did not get back image data as the response.
     try:
         with Image.open(io.BytesIO(r.content)) as image:
+
+            print(image.format)
+            if destination_path.suffix == "":
+                destination_path = f"{destination_path}.{image.format.lower()}"
+            print(destination_path)
             image.save(destination_path)
 
     except UnidentifiedImageError:
         raise ImageDownloadError(
             f"Download error: the target resource at {url} does not appear to be an image."
         )
+
+    return destination_path
