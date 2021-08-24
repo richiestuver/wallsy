@@ -12,6 +12,7 @@ import os
 import sys
 import json
 import shutil
+from random import sample
 from urllib.parse import urlparse
 from pathlib import Path
 from stat import S_ISFIFO
@@ -116,13 +117,16 @@ def cli(ctx, file, url):  # named cli by convention in the click docs
         pass
 
     ### If standard input is not part of a pipe, path must be specified by user in file or url option
-    dest_path = load_file(file, url)
+    
+    try: 
+        dest_path = load_file(file, url)
+        # make dest_path available to other commands using the context object.
+        # does not appear that return value of group function is available in return_callback
+        ctx.obj = dest_path
+        return dest_path
 
-    # make dest_path available to other commands using the context object.
-    # does not appear that return value of group function is available in return_callback
-    ctx.obj = dest_path
-    return dest_path
-
+    except Exception:
+        pass
 
 def load_file(file=None, url=None) -> Path:
     """
@@ -137,7 +141,7 @@ def load_file(file=None, url=None) -> Path:
         file: wallsy load --file="/path/to/my/photo.jpg"
         url:  wallsy load --url="https://www.example.com/myphoto.jpg"
         """
-        raise click.UsageError(msg)
+        raise click.ClickException(msg)
 
     if file is not None and url is not None:
         msg = """Wallsy received conflicting options: --file and --url. Please choose one option and try again. 
@@ -216,8 +220,12 @@ def random(query):
     Generate a random image from source (default: Unsplash)
     """
 
-    def _random():
-        return "This is random"
+    def _random(*args, **kwargs):
+
+        img_set = list(Path(os.getenv("WALLSY_MEDIA_DIR")).iterdir())
+        random_img = sample(img_set, 1)[0]
+        click.echo(f"Grabbed {random_img.name} from {os.getenv('WALLSY_MEDIA_DIR')}")
+        return random_img
 
     return _random
 
