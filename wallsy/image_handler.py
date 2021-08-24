@@ -105,7 +105,6 @@ def download_image(url: str, file_path: str) -> Path:
     try:
         with Image.open(io.BytesIO(r.content)) as image:
 
-            print(image.format)
             if destination_path.suffix == "":
                 destination_path = Path(f"{destination_path}.{image.format.lower()}")
             print(destination_path)
