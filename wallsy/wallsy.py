@@ -36,6 +36,7 @@ The app
 
 """
 
+# TODO: move decorator and load file to cli_utils
 # TODO: fix issue where mode after posterize is incompatible with other effects like blur (ValueError)
 # TODO: realized that requests library automatically follows redirects. hell yes. online random image is unblocked
 # TODO: write the unsplash handler to be a wrapper around the source.unsplash API
@@ -45,7 +46,6 @@ The app
 # TODO: documentation - make sure everything has docstrings, every click.option has "help" kwarg
 #          every action has a click.echo() explanation and error handling is transparent and documented
 # TODO: rearchitecture - effects should become their own subcommands
-# TODO: @require_filename decorator
 # TODO: how to fix "stacking" of effects unintentionally. e.g. random grabs an image that is blurred and you blur it again
 # TODO: is it possible to support an unauthenticated random image from url?
 # TODO: refactor occurrences of os.path to pathlib.Path across app
@@ -269,10 +269,7 @@ def require_filename(func):
     """
     @wraps(func)
     def wrapper(*args, **kwargs):
-        print(f"args: {args}\nkwargs:{kwargs}")
-
         func_args = getcallargs(func, *args, **kwargs)
-        
         if func_args.get('filename') is None:
             raise click.ClickException(f"{func.__name__} did not receive a filename as part of pipeline. Did you run 'load' or 'random' to source an image?")
         return func(*args, **kwargs)
@@ -286,13 +283,9 @@ def blur(radius):
     Apply a Gaussian blur effect to image. Default pixel radius for blur is 5.
     """
 
+    @require_filename
     def _blur(filename, *args, **kwargs):
         """Callback for the effect subcommand"""
-
-        if filename is None:
-            raise click.UsageError(
-                "Effect failed - no valid image provided. Did you run 'load' or 'random' to source an image?"
-            )
 
         if radius:
             print(f"radius: {radius}")
@@ -306,6 +299,11 @@ def blur(radius):
 
 @cli.command()
 def noir():
+    """
+    Apply a noir effect to the image. Currently this only converts image to greyscale. May add
+    additional enhancements (e.g. increase contrast) in the future.
+    """
+    @require_filename
     def _noir(filename, *args, **kwargs):
         click.echo(f"Applying noir effect to {filename.name}")
         filename = image_handler.greyscale(img_path=filename, path_modifier="noir")
@@ -341,8 +339,6 @@ def update_desktop_wallpaper():
 
     def _update_desktop_wallpaper(filename, *args, **kwargs):
         """Callback for the background subcommand"""
-
-        # desktop command should be passed in a filename from a prior subcommand.
 
         # TODO: make it so that running desktop pumps the current wallpaper into the pipeline!!!!
 
