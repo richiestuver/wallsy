@@ -17,7 +17,7 @@ but this is not intended to be a comprehensive photo manipulation program.
 from pathlib import Path
 import io
 
-from PIL import Image, UnidentifiedImageError
+from PIL import Image, ImageFilter, UnidentifiedImageError
 import requests
 
 
@@ -88,6 +88,19 @@ def download_image(url: str, file_path: str) -> Path:
     # two main error conditions: bad http request or trying to access something that's not an image.
 
     try:
+
+        """
+        The get method from Requests automatically follows redirects (status codes 3XX) on your behalf and 
+        stores the intermediary responses in the response.history attribute. This is extremely
+        useful for our use case where the typical source url won't be directly an image resource
+        but rather include a redirect to the ultimate image. In other words we are getting 
+        redirect handling "out of the box" but have the ability to manage or inspect redirects 
+        later if we needed to. Note that passing "allow_redirects=False" to get() will disable this behavior.
+        More info: https://docs.python-requests.org/en/latest/user/quickstart/#redirection-and-history
+        """
+
+        # TODO: implement timeout handling from requests module. default behavior is infinite (no timeout)
+
         r = requests.get(url)
 
     except requests.exceptions.RequestException as error:
@@ -115,3 +128,19 @@ def download_image(url: str, file_path: str) -> Path:
         )
 
     return destination_path
+
+
+def blur(img_path: Path, value=50) -> Path:
+    """
+    Apply a gaussian blur to a given image. Original image is unmodified.
+    """
+
+    with Image.open(img_path) as image:
+        blur_effect = ImageFilter.GaussianBlur(radius=value)
+        # blur_effect = ImageFilter.BLUR
+        img_blur = image.filter(filter=blur_effect)
+        out = Path(f"{img_path.parent / img_path.stem}-blur{img_path.suffix}")
+        print(out)
+        img_blur.save(out)
+
+        return out
