@@ -23,9 +23,9 @@ from inspect import getcallargs
 
 import click
 
-import wallsy.image_handler as image_handler
-import wallsy.wallpaper_handler as wallpaper_handler
-import wallsy.utils as utils
+from wallsy import image_handler
+from wallsy import wallpaper_handler
+from wallsy import cli_utils as utils
 
 """
 Wallsy CLI
