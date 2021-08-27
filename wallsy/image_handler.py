@@ -130,17 +130,53 @@ def download_image(url: str, file_path: str) -> Path:
     return destination_path
 
 
-def blur(img_path: Path, value=50) -> Path:
+def blur(img_path: Path, value=50, blur_func=ImageFilter.GaussianBlur) -> Path:
     """
     Apply a gaussian blur to a given image. Original image is unmodified.
+
+    blur_func accepts either ImageFilter.GaussianBlur or ImageFilter.BoxBlur
     """
 
     with Image.open(img_path) as image:
-        blur_effect = ImageFilter.GaussianBlur(radius=value)
+        blur_effect = blur_func(radius=value)
         # blur_effect = ImageFilter.BLUR
         img_blur = image.filter(filter=blur_effect)
         out = Path(f"{img_path.parent / img_path.stem}-blur{img_path.suffix}")
-        print(out)
         img_blur.save(out)
 
+        return out
+
+def greyscale(img_path: Path, path_modifier: str = "greyscale") -> Path:
+    """
+    Convert image to greyscale. Image is not modified in place. A new image is written out to file.
+    """
+
+    with Image.open(img_path) as image:
+        img_greyscale = image.convert(mode='L')  # 'L' corresponds to 8-bit greyscale
+        out = Path(f"{img_path.parent / img_path.stem}-{path_modifier}{img_path.suffix}")
+        img_greyscale.save(out)
+
+        return out
+
+
+def quantize(img_path: Path, path_modifier: str = "quanitize", colors:int = 16) -> Path:
+    """
+    Helper function wraps the PIL quantization method. Opens image and writes image and saves
+    new quantized image at img_path with the addition of the path_modifier to identify the new file.
+
+    This is most useful for "posterization" effect by reducing the color space down to a small number.
+    According to this article from Adobe the human eye can most distinguish the effect when colors 
+    are reduced to the range 1-35. https://www.adobe.com/creativecloud/photography/discover/posterize-photo.html
+    
+    Another simple overview of posterization: https://www.cambridgeincolour.com/tutorials/posterization.htm
+    """
+
+    with Image.open(img_path) as image:
+        # Note: max coverage seems to get the most interesting results. need to read
+        # about quantization methods to really understand the options better. See Pillow docs.
+        img_quantized = image.quantize(colors=colors, method=Image.MAXCOVERAGE)
+        # after quantization our mode is "P" which has an alpha layer, not supported by jpg. Force to save as png.
+        out = Path(f"{img_path.parent / img_path.stem}-{path_modifier}{colors}.png")
+        img_quantized.save(out)
+    
         return out

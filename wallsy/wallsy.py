@@ -18,6 +18,8 @@ from pathlib import Path
 from stat import S_ISFIFO
 from pathlib import Path
 from shutil import copyfile
+from functools import wraps
+from inspect import getcallargs
 
 import click
 
@@ -34,6 +36,7 @@ The app
 
 """
 
+# TODO: fix issue where mode after posterize is incompatible with other effects like blur (ValueError)
 # TODO: realized that requests library automatically follows redirects. hell yes. online random image is unblocked
 # TODO: write the unsplash handler to be a wrapper around the source.unsplash API
 # TODO: write random commmand so that it is effectively same behavior as current "wallsy --url" command with url specified as unsplash
@@ -42,6 +45,7 @@ The app
 # TODO: documentation - make sure everything has docstrings, every click.option has "help" kwarg
 #          every action has a click.echo() explanation and error handling is transparent and documented
 # TODO: rearchitecture - effects should become their own subcommands
+# TODO: @require_filename decorator
 # TODO: how to fix "stacking" of effects unintentionally. e.g. random grabs an image that is blurred and you blur it again
 # TODO: is it possible to support an unauthenticated random image from url?
 # TODO: refactor occurrences of os.path to pathlib.Path across app
@@ -258,16 +262,31 @@ def random(query):
 
     return _random
 
-
-@cli.command(name="effect")
-@click.option("--blur", is_flag=False, flag_value=50, default=50)
-@click.option("--blur", is_flag=False, flag_value=50, default=50)
-def apply_effects(blur):
+def require_filename(func):
     """
-    Apply one or more effects to the image.
+    Decorator for callbacks that require a filename to be explicitly passed in order to perform
+    desired action. This decorator abstracts checking for this parameter and raises the necessary exception. 
+    """
+    @wraps(func)
+    def wrapper(*args, **kwargs):
+        print(f"args: {args}\nkwargs:{kwargs}")
+
+        func_args = getcallargs(func, *args, **kwargs)
+        
+        if func_args.get('filename') is None:
+            raise click.ClickException(f"{func.__name__} did not receive a filename as part of pipeline. Did you run 'load' or 'random' to source an image?")
+        return func(*args, **kwargs)
+
+    return wrapper
+
+@cli.command(name="blur")
+@click.option('--radius', default=5, show_default=True, help="Specify the pixel radius for blur effect.")
+def blur(radius):
+    """
+    Apply a Gaussian blur effect to image. Default pixel radius for blur is 5.
     """
 
-    def _apply_effects(filename, *args, **kwargs):
+    def _blur(filename, *args, **kwargs):
         """Callback for the effect subcommand"""
 
         if filename is None:
@@ -275,15 +294,39 @@ def apply_effects(blur):
                 "Effect failed - no valid image provided. Did you run 'load' or 'random' to source an image?"
             )
 
-        if blur:
+        if radius:
+            print(f"radius: {radius}")
             click.echo(f"Blurring {filename.name}...")
-            filename = image_handler.blur(filename, value=int(blur))
+            filename = image_handler.blur(filename, value=int(radius))
             click.echo(f"Saved new image as {filename.name}")
 
         return filename
 
-    return _apply_effects
+    return _blur
 
+@cli.command()
+def noir():
+    def _noir(filename, *args, **kwargs):
+        click.echo(f"Applying noir effect to {filename.name}")
+        filename = image_handler.greyscale(img_path=filename, path_modifier="noir")
+        click.echo(f"Saved new image as {filename.name}")
+
+        return filename
+    return _noir
+
+@cli.command()
+@click.option('--colors', default=16, show_default=True, help="Specify the number of colors to reduce the image to (range 1-255)")
+def posterize(colors):
+    """
+    Apply a posterization effect to the image. 
+    """
+    @require_filename
+    def _posterize(filename, *args, **kwargs):
+        click.echo(f"Applying poster effect to {filename.name}. This may take a moment...")
+        filename = image_handler.quantize(filename, path_modifier="posterize", colors=colors)
+        click.echo(f"Saved new image as {filename.name}")
+        return filename
+    return _posterize
 
 @cli.command(name="desktop")
 def update_desktop_wallpaper():
