@@ -6,6 +6,9 @@ from pathlib import Path
 from stat import S_ISFIFO
 from pathlib import Path
 from shutil import copyfile
+from functools import wraps
+from inspect import getcallargs
+from urllib.parse import urlparse
 
 import click
 
@@ -64,6 +67,81 @@ def load_config():
         raise click.ClickException(error)
 
 
+def load_file(file=None, url=None) -> Path:
+    """
+    Retrieve a new image from either local filesystem or URL (must point directly to an accessible image resource).
+    """
+
+    # Catch usage errors immediately on invocation.
+    # At least one (but not both) of --file or --url are required.
+    if file is None and url is None:
+        msg = """Wallsy requires either a file path or url pointing to an image. Please provide either --file or --url options. 
+        
+        file: wallsy load --file="/path/to/my/photo.jpg"
+        url:  wallsy load --url="https://www.example.com/myphoto.jpg"
+        """
+        raise click.ClickException(msg)
+
+    if file is not None and url is not None:
+        msg = """Wallsy received conflicting options: --file and --url. Please choose one option and try again. 
+        """
+
+        raise click.UsageError(msg)
+
+    """set destination path for where the image should be stored. 
+    images are intended to be modified so input paths shouldn't be 
+    used as the destination path as doing so will modify the original input.
+    in the future maybe allow this to be specified as an option to 
+    modify the input file. e.g. --no-save"""
+
+    dest_path = Path(os.environ["WALLSY_MEDIA_DIR"])
+
+    """
+    FILE option
+    """
+    if file:
+
+        # if file is not a Path, (can also be str or TextIOBuffer), convert to Path
+        file = Path(file)
+        dest_path = dest_path / file.name
+
+        # validate that the input file is a valid image.
+        try:
+            image_handler.validate_image(file)
+
+        except image_handler.InvalidImageError as error:
+            raise click.BadParameter(str(error))
+
+        # copy the file contents to destination
+        try:
+            copyfile(file, dest_path)
+            click.echo(f"Copied {file.name} to {dest_path}")
+        except Exception as error:
+            raise click.ClickException(error)
+
+    """
+    URL option
+    """
+    if url:
+
+        file_name = Path(urlparse(url).path).name
+
+        try:
+            dest_path = image_handler.download_image(
+                url=url, file_path=dest_path / file_name
+            )
+            click.echo(f"Downloaded image to {dest_path}")
+        except image_handler.ImageDownloadError as error:
+            raise click.ClickException(str(error))
+        except image_handler.InvalidImageError as error:
+            raise click.BadParameter(str(error))
+
+    # if we get this far, we should have a validated image. make the path available to other
+    # subcommands by storing in the click context's object attribute (which is designed for this purpose)
+
+    return dest_path
+
+
 def generate_config(config_dir):
     """Create a new config file at appropriate location if one is not detected"""
 
@@ -90,3 +168,17 @@ def reset():
 
     load_config()
     shutil.rmtree(os.environ["wallsy_config_location"])
+
+def require_filename(func):
+    """
+    Decorator for callbacks that require a filename to be explicitly passed in order to perform
+    desired action. This decorator abstracts checking for this parameter and raises the necessary exception. 
+    """
+    @wraps(func)
+    def wrapper(*args, **kwargs):
+        func_args = getcallargs(func, *args, **kwargs)
+        if func_args.get('filename') is None:
+            raise click.ClickException(f"{func.__name__} did not receive a filename as part of pipeline. Did you run 'load' or 'random' to source an image?")
+        return func(*args, **kwargs)
+
+    return wrapper

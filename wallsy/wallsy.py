@@ -27,6 +27,7 @@ from wallsy import image_handler
 from wallsy import wallpaper_handler
 from wallsy import cli_utils as utils
 
+
 """
 Wallsy CLI
 
@@ -132,12 +133,11 @@ def cli(ctx, file, url):  # named cli by convention in the click docs
     ### If standard input is not part of a pipe, path must be specified by user in file or url option
 
     if file is not None or url is not None:
-        dest_path = load_file(file, url)
+        dest_path = utils.load_file(file, url)
         # make dest_path available to other commands using the context object.
         # does not appear that return value of group function is available in return_callback
         ctx.obj = dest_path
         return dest_path
-
 
 @cli.command()
 @click.option(
@@ -157,94 +157,18 @@ def add(file=None, url=None) -> Path:
     def _add(filename, *args, **kwargs):
 
         if filename:
-            return load_file(file=filename)
+            return utils.load_file(file=filename)
 
         elif file:
-            return load_file(file=file)
+            return utils.load_file(file=file)
 
         elif url:
-            return load_file(url=url)
+            return utils.load_file(url=url)
 
         else:
             raise click.UsageError("Add - No file or url specified ")
 
     return _add
-
-
-def load_file(file=None, url=None) -> Path:
-    """
-    Retrieve a new image from either local filesystem or URL (must point directly to an accessible image resource).
-    """
-
-    # Catch usage errors immediately on invocation.
-    # At least one (but not both) of --file or --url are required.
-    if file is None and url is None:
-        msg = """Wallsy requires either a file path or url pointing to an image. Please provide either --file or --url options. 
-        
-        file: wallsy load --file="/path/to/my/photo.jpg"
-        url:  wallsy load --url="https://www.example.com/myphoto.jpg"
-        """
-        raise click.ClickException(msg)
-
-    if file is not None and url is not None:
-        msg = """Wallsy received conflicting options: --file and --url. Please choose one option and try again. 
-        """
-
-        raise click.UsageError(msg)
-
-    """set destination path for where the image should be stored. 
-    images are intended to be modified so input paths shouldn't be 
-    used as the destination path as doing so will modify the original input.
-    in the future maybe allow this to be specified as an option to 
-    modify the input file. e.g. --no-save"""
-
-    dest_dir = Path(os.environ["WALLSY_MEDIA_DIR"])
-
-    """
-    FILE option
-    """
-    if file:
-
-        # if file is not a Path, (can also be str or TextIOBuffer), convert to Path
-        file = Path(file)
-        dest_path = dest_dir / file.name
-
-        # validate that the input file is a valid image.
-        try:
-            image_handler.validate_image(file)
-
-        except image_handler.InvalidImageError as error:
-            raise click.BadParameter(str(error))
-
-        # copy the file contents to destination
-        try:
-            copyfile(file, dest_path)
-            click.echo(f"Copied {file.name} to {dest_path}")
-        except Exception as error:
-            raise click.ClickException(error)
-
-    """
-    URL option
-    """
-    if url:
-
-        file_name = Path(urlparse(url).path).name
-
-        try:
-            dest_path = image_handler.download_image(
-                url=url, file_path=dest_dir / file_name
-            )
-            click.echo(f"Downloaded image to {dest_path}")
-        except image_handler.ImageDownloadError as error:
-            raise click.ClickException(str(error))
-        except image_handler.InvalidImageError as error:
-            raise click.BadParameter(str(error))
-
-    # if we get this far, we should have a validated image. make the path available to other
-    # subcommands by storing in the click context's object attribute (which is designed for this purpose)
-
-    return dest_path
-
 
 @cli.command(name="random")
 @click.option("--query", "-q")
@@ -262,20 +186,6 @@ def random(query):
 
     return _random
 
-def require_filename(func):
-    """
-    Decorator for callbacks that require a filename to be explicitly passed in order to perform
-    desired action. This decorator abstracts checking for this parameter and raises the necessary exception. 
-    """
-    @wraps(func)
-    def wrapper(*args, **kwargs):
-        func_args = getcallargs(func, *args, **kwargs)
-        if func_args.get('filename') is None:
-            raise click.ClickException(f"{func.__name__} did not receive a filename as part of pipeline. Did you run 'load' or 'random' to source an image?")
-        return func(*args, **kwargs)
-
-    return wrapper
-
 @cli.command(name="blur")
 @click.option('--radius', default=5, show_default=True, help="Specify the pixel radius for blur effect.")
 def blur(radius):
@@ -283,7 +193,7 @@ def blur(radius):
     Apply a Gaussian blur effect to image. Default pixel radius for blur is 5.
     """
 
-    @require_filename
+    @utils.require_filename
     def _blur(filename, *args, **kwargs):
         """Callback for the effect subcommand"""
 
@@ -303,7 +213,7 @@ def noir():
     Apply a noir effect to the image. Currently this only converts image to greyscale. May add
     additional enhancements (e.g. increase contrast) in the future.
     """
-    @require_filename
+    @utils.require_filename
     def _noir(filename, *args, **kwargs):
         click.echo(f"Applying noir effect to {filename.name}")
         filename = image_handler.greyscale(img_path=filename, path_modifier="noir")
@@ -318,7 +228,7 @@ def posterize(colors):
     """
     Apply a posterization effect to the image. 
     """
-    @require_filename
+    @utils.require_filename
     def _posterize(filename, *args, **kwargs):
         click.echo(f"Applying poster effect to {filename.name}. This may take a moment...")
         filename = image_handler.quantize(filename, path_modifier="posterize", colors=colors)
