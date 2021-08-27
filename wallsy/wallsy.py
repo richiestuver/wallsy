@@ -34,7 +34,16 @@ The app
 
 """
 
-# TODO: Save wallpapers to the default folder for the Gnome desktop
+# TODO: realized that requests library automatically follows redirects. hell yes. online random image is unblocked
+# TODO: write the unsplash handler to be a wrapper around the source.unsplash API
+# TODO: write random commmand so that it is effectively same behavior as current "wallsy --url" command with url specified as unsplash
+# TODO: make it so that running desktop pumps the current wallpaper into the pipeline!!!!
+# TODO: code cleanup - this thing is a huge mess right now
+# TODO: documentation - make sure everything has docstrings, every click.option has "help" kwarg
+#          every action has a click.echo() explanation and error handling is transparent and documented
+# TODO: rearchitecture - effects should become their own subcommands
+# TODO: how to fix "stacking" of effects unintentionally. e.g. random grabs an image that is blurred and you blur it again
+# TODO: is it possible to support an unauthenticated random image from url?
 # TODO: refactor occurrences of os.path to pathlib.Path across app
 # TODO: notifications to user about save and retrieval
 # TODO: unit testing
@@ -117,16 +126,44 @@ def cli(ctx, file, url):  # named cli by convention in the click docs
         pass
 
     ### If standard input is not part of a pipe, path must be specified by user in file or url option
-    
-    try: 
+
+    if file is not None or url is not None:
         dest_path = load_file(file, url)
         # make dest_path available to other commands using the context object.
         # does not appear that return value of group function is available in return_callback
         ctx.obj = dest_path
         return dest_path
 
-    except Exception:
-        pass
+@cli.command()
+@click.option(
+    "--file",
+    "-f",
+    type=click.Path(
+        path_type=Path
+    ),  # make sure that file paths are always Path objects.
+    help="Load an image from file path. Ensures image is valid and stores a copy of the image in the Wallsy folder.",
+)
+@click.option("--url", "-u")
+def add(file=None, url=None) -> Path:
+    """
+    Add an image to Wallsy pipeline and save to Wallsy folder.
+    """
+
+    def _add(filename, *args, **kwargs):
+
+        if filename:
+            return load_file(file=filename)
+        
+        elif file:
+            return load_file(file=file)
+        
+        elif url:
+            return load_file(url=url)
+
+        else:
+            raise click.UsageError("Add - No file or url specified ")
+            
+    return _add
 
 def load_file(file=None, url=None) -> Path:
     """
@@ -191,7 +228,7 @@ def load_file(file=None, url=None) -> Path:
             dest_path = image_handler.download_image(
                 url=url, file_path=dest_dir / file_name
             )
-            print(type(dest_path))
+            click.echo(f"Downloaded image to {dest_path}")
         except image_handler.ImageDownloadError as error:
             raise click.ClickException(str(error))
         except image_handler.InvalidImageError as error:
@@ -201,17 +238,6 @@ def load_file(file=None, url=None) -> Path:
     # subcommands by storing in the click context's object attribute (which is designed for this purpose)
 
     return dest_path
-
-
-@cli.command()
-def dummy():
-    """Dummy command for testing"""
-
-    def _dummy(*args, **kwargs):
-        return args, kwargs
-
-    return _dummy
-
 
 @cli.command(name="random")
 @click.option("--query", "-q")
@@ -223,7 +249,7 @@ def random(query):
     def _random(*args, **kwargs):
 
         img_set = list(Path(os.getenv("WALLSY_MEDIA_DIR")).iterdir())
-        random_img = sample(img_set, 1)[0]
+        random_img = sample(img_set, 1)[0].resolve()
         click.echo(f"Grabbed {random_img.name} from {os.getenv('WALLSY_MEDIA_DIR')}")
         return random_img
 
@@ -231,13 +257,27 @@ def random(query):
 
 
 @cli.command(name="effect")
-def apply_effects():
+@click.option("--blur", is_flag=False, flag_value=50, default=50)
+@click.option("--blur", is_flag=False, flag_value=50, default=50)
+
+def apply_effects(blur):
     """
     Apply one or more effects to the image.
     """
 
     def _apply_effects(filename, *args, **kwargs):
         """Callback for the effect subcommand"""
+
+        if filename is None:
+            raise click.UsageError(
+                "Effect failed - no valid image provided. Did you run 'load' or 'random' to source an image?"
+            )
+
+        if blur:
+            click.echo(f"Blurring {filename.name}...")
+            filename = image_handler.blur(filename, value=int(blur))
+            click.echo(f"Saved new image as {filename.name}")
+        
         return filename
 
     return _apply_effects
@@ -259,12 +299,13 @@ def update_desktop_wallpaper():
 
         # desktop command should be passed in a filename from a prior subcommand.
 
+        # TODO: make it so that running desktop pumps the current wallpaper into the pipeline!!!!
+
         if filename is None:
             raise click.UsageError(
-                "Update desktop failed: No valid image provided. Did you run 'load' or 'random' to source an image?"
+                "Update desktop failed - no valid image provided. Did you run 'load' or 'random' to source an image?"
             )
 
-        
         wallpaper_dir = Path(os.getenv("WALLSY_WALLPAPER_DIR"))
         shutil.copyfile(filename, wallpaper_dir / filename.name)
         click.echo(f"Added a copy of {filename.name} to {wallpaper_dir}")
@@ -319,6 +360,4 @@ def process_pipeline(ctx, callbacks, *args, **kwargs):
     filename = ctx.obj
 
     for callback in callbacks:
-        # print(callback.__name__)
         filename = callback(filename)
-        # print(filename)
