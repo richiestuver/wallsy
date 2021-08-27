@@ -90,11 +90,11 @@ def download_image(url: str, file_path: str) -> Path:
     try:
 
         """
-        The get method from Requests automatically follows redirects (status codes 3XX) on your behalf and 
+        The get method from Requests automatically follows redirects (status codes 3XX) on your behalf and
         stores the intermediary responses in the response.history attribute. This is extremely
         useful for our use case where the typical source url won't be directly an image resource
-        but rather include a redirect to the ultimate image. In other words we are getting 
-        redirect handling "out of the box" but have the ability to manage or inspect redirects 
+        but rather include a redirect to the ultimate image. In other words we are getting
+        redirect handling "out of the box" but have the ability to manage or inspect redirects
         later if we needed to. Note that passing "allow_redirects=False" to get() will disable this behavior.
         More info: https://docs.python-requests.org/en/latest/user/quickstart/#redirection-and-history
         """

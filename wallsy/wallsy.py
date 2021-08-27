@@ -134,6 +134,7 @@ def cli(ctx, file, url):  # named cli by convention in the click docs
         ctx.obj = dest_path
         return dest_path
 
+
 @cli.command()
 @click.option(
     "--file",
@@ -153,17 +154,18 @@ def add(file=None, url=None) -> Path:
 
         if filename:
             return load_file(file=filename)
-        
+
         elif file:
             return load_file(file=file)
-        
+
         elif url:
             return load_file(url=url)
 
         else:
             raise click.UsageError("Add - No file or url specified ")
-            
+
     return _add
+
 
 def load_file(file=None, url=None) -> Path:
     """
@@ -239,6 +241,7 @@ def load_file(file=None, url=None) -> Path:
 
     return dest_path
 
+
 @cli.command(name="random")
 @click.option("--query", "-q")
 def random(query):
@@ -259,7 +262,6 @@ def random(query):
 @cli.command(name="effect")
 @click.option("--blur", is_flag=False, flag_value=50, default=50)
 @click.option("--blur", is_flag=False, flag_value=50, default=50)
-
 def apply_effects(blur):
     """
     Apply one or more effects to the image.
@@ -277,7 +279,7 @@ def apply_effects(blur):
             click.echo(f"Blurring {filename.name}...")
             filename = image_handler.blur(filename, value=int(blur))
             click.echo(f"Saved new image as {filename.name}")
-        
+
         return filename
 
     return _apply_effects
