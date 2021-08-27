@@ -17,9 +17,7 @@ from urllib.parse import urlparse
 from pathlib import Path
 from stat import S_ISFIFO
 from pathlib import Path
-from shutil import copyfile
-from functools import wraps
-from inspect import getcallargs
+from shutil import copy2, SameFileError
 
 import click
 
@@ -37,9 +35,7 @@ The app
 
 """
 
-# TODO: move decorator and load file to cli_utils
 # TODO: fix issue where mode after posterize is incompatible with other effects like blur (ValueError)
-# TODO: realized that requests library automatically follows redirects. hell yes. online random image is unblocked
 # TODO: write the unsplash handler to be a wrapper around the source.unsplash API
 # TODO: write random commmand so that it is effectively same behavior as current "wallsy --url" command with url specified as unsplash
 # TODO: make it so that running desktop pumps the current wallpaper into the pipeline!!!!
@@ -252,16 +248,22 @@ def update_desktop_wallpaper():
 
         # TODO: make it so that running desktop pumps the current wallpaper into the pipeline!!!!
 
-        if filename is None:
-            raise click.UsageError(
-                "Update desktop failed - no valid image provided. Did you run 'load' or 'random' to source an image?"
-            )
+        if filename:
+            wallpaper_dir = Path(os.getenv("WALLSY_WALLPAPER_DIR"))
+            
+            try:
+                # note: copy2 attempts to preserve file metadata. other copy functions in shutil do not do so
+                shutil.copy2(filename, wallpaper_dir / filename.name)
+                click.echo(f"Added a copy of {filename.name} to {wallpaper_dir}")
+            except SameFileError:
+                click.echo(f"{filename.name} is already located at {wallpaper_dir}")
+            
+            wallpaper_handler.update_wallpaper(img_path=wallpaper_dir / filename.name)
+            click.echo(f"Desktop wallpaper updated to {wallpaper_dir / filename.name}")
 
-        wallpaper_dir = Path(os.getenv("WALLSY_WALLPAPER_DIR"))
-        shutil.copyfile(filename, wallpaper_dir / filename.name)
-        click.echo(f"Added a copy of {filename.name} to {wallpaper_dir}")
-        wallpaper_handler.update_wallpaper(img_path=wallpaper_dir / filename.name)
-        click.echo(f"Desktop wallpaper updated to {wallpaper_dir / filename.name}")
+        else:  # retrieve the currently set desktop wallpaper and use that as input for the pipeline 
+            filename = wallpaper_handler.get_current_wallpaper()
+            utils.load_file(file=filename)
 
         return filename
 

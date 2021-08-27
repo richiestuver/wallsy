@@ -28,14 +28,15 @@ class WallpaperUpdateError(Exception):
     pass
 
 
-def get_wallpaper_location() -> Path:
+def get_current_wallpaper() -> Path:
     """
-    Read the target wallpaper location from config. For Gnome DE this should be
-    set to "~/.local/share/backgrounds" if it's desirable that wallpapers appear
-    in the desktop wallpaper GUI in Gnome settings.
+    Retrieve the current wallpaper from the Gnome settings for desktop background. This is a wrapper
+    around the Gio.Settings API.
     """
 
-    pass
+    gnome_background_settings = Gio.Settings(schema="org.gnome.desktop.background")
+
+    return Path(gnome_background_settings["picture-uri"])
 
 
 def set_wallpaper_location(file_path: str = "~/.local/share/backgrounds"):

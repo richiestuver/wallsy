@@ -5,7 +5,7 @@ import shutil
 from pathlib import Path
 from stat import S_ISFIFO
 from pathlib import Path
-from shutil import copyfile
+from shutil import copy2, SameFileError
 from functools import wraps
 from inspect import getcallargs
 from urllib.parse import urlparse
@@ -114,10 +114,11 @@ def load_file(file=None, url=None) -> Path:
 
         # copy the file contents to destination
         try:
-            copyfile(file, dest_path)
+            # Note that copy2 attempts to preserve metedata, other copy funcs in shutil do not
+            copy2(file, dest_path)
             click.echo(f"Copied {file.name} to {dest_path}")
-        except Exception as error:
-            raise click.ClickException(error)
+        except SameFileError:
+            click.echo(f"{file.name} is already located at {dest_path}")
 
     """
     URL option
