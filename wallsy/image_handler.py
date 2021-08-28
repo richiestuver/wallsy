@@ -16,6 +16,7 @@ but this is not intended to be a comprehensive photo manipulation program.
 
 from pathlib import Path
 import io
+from urllib.parse import urlparse
 
 from PIL import Image, ImageFilter, UnidentifiedImageError
 import requests
@@ -117,6 +118,15 @@ def download_image(url: str, file_path: str) -> Path:
     # successful request but did not get back image data as the response.
     try:
         with Image.open(io.BytesIO(r.content)) as image:
+
+            # add a check to see if we were redirected. this is useful in the case that a generic url is hit
+            # that redirects to an actual image resource. we want the path of the actual image resource to 
+            # be the filename and not the generic url.
+
+            if url != r.url:  # r.url is the last effective url hit in a redirect sequence
+                destination_path = Path(destination_path.parent) / Path(urlparse(r.url).path).name
+
+            # Note: should add a log for this somewhere. 
 
             if destination_path.suffix == "":
                 destination_path = Path(f"{destination_path}.{image.format.lower()}")

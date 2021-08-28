@@ -35,10 +35,8 @@ The app
 
 """
 
-# TODO: fix issue where mode after posterize is incompatible with other effects like blur (ValueError)
 # TODO: write the unsplash handler to be a wrapper around the source.unsplash API
 # TODO: write random commmand so that it is effectively same behavior as current "wallsy --url" command with url specified as unsplash
-# TODO: make it so that running desktop pumps the current wallpaper into the pipeline!!!!
 # TODO: code cleanup - this thing is a huge mess right now
 # TODO: documentation - make sure everything has docstrings, every click.option has "help" kwarg
 #          every action has a click.echo() explanation and error handling is transparent and documented
@@ -47,6 +45,7 @@ The app
 # TODO: is it possible to support an unauthenticated random image from url?
 # TODO: refactor occurrences of os.path to pathlib.Path across app
 # TODO: notifications to user about save and retrieval
+# TODO: fix issue where mode after posterize is incompatible with other effects like blur (ValueError)
 # TODO: unit testing
 # TODO: random and effects
 # FUTURE: Support streams of input and not single images.
