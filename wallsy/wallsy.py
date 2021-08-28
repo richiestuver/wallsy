@@ -65,7 +65,9 @@ The app
 )
 @click.option("--url", "-u")
 @click.version_option()  # reads version from setup.cfg metadata
-def cli(ctx, file, url):  # named cli by convention in the click docs
+def cli(
+    ctx: click.Context, file: Path, url: str
+) -> Path:  # named cli by convention in the click docs
     """
     The best image modifier for custom wallpapers.
 
