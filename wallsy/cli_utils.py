@@ -128,6 +128,7 @@ def load_file(file=None, url=None) -> Path:
         file_name = Path(urlparse(url).path).name
 
         try:
+            click.echo(f"Grabbing an image from {url}...")
             dest_path = image_handler.download_image(
                 url=url, file_path=dest_path / file_name
             )
@@ -170,16 +171,20 @@ def reset():
     load_config()
     shutil.rmtree(os.environ["wallsy_config_location"])
 
+
 def require_filename(func):
     """
     Decorator for callbacks that require a filename to be explicitly passed in order to perform
-    desired action. This decorator abstracts checking for this parameter and raises the necessary exception. 
+    desired action. This decorator abstracts checking for this parameter and raises the necessary exception.
     """
+
     @wraps(func)
     def wrapper(*args, **kwargs):
         func_args = getcallargs(func, *args, **kwargs)
-        if func_args.get('filename') is None:
-            raise click.ClickException(f"{func.__name__} did not receive a filename as part of pipeline. Did you run 'load' or 'random' to source an image?")
+        if func_args.get("filename") is None:
+            raise click.ClickException(
+                f"{func.__name__} did not receive a filename as part of pipeline. Did you run 'load' or 'random' to source an image?"
+            )
         return func(*args, **kwargs)
 
     return wrapper

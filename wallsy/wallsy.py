@@ -168,18 +168,26 @@ def add(file=None, url=None) -> Path:
 
 
 @cli.command(name="random")
-@click.option("--query", "-q")
-def random(query):
+@click.option("--local/--web", is_flag=True, default=False)
+def random(local: bool):
     """
     Generate a random image from source (default: Unsplash)
     """
 
-    def _random(*args, **kwargs):
+    def _random(*args, **kwargs) -> Path:
 
-        img_set = list(Path(os.getenv("WALLSY_MEDIA_DIR")).iterdir())
-        random_img = sample(img_set, 1)[0].resolve()
-        click.echo(f"Grabbed {random_img.name} from {os.getenv('WALLSY_MEDIA_DIR')}")
-        return random_img
+        file = None
+
+        if local:
+            img_set = list(Path(os.getenv("WALLSY_MEDIA_DIR")).iterdir())
+            file = sample(img_set, 1)[0].resolve()
+            click.echo(f"Grabbed {file.name} from {os.getenv('WALLSY_MEDIA_DIR')}")
+
+        else:
+            url = "https://source.unsplash.com/random"
+            file = utils.load_file(url=url)
+
+        return file
 
     return _random
 
