@@ -51,7 +51,6 @@ The app
 # FUTURE: Support streams of input and not single images.
 
 
-@click.version_option()  # reads version from setup.cfg metadata
 @click.group(
     chain=True
 )  # default behavior is to pass --help automatically if no subcommand provided
@@ -65,6 +64,7 @@ The app
     help="Load an image from file path. Ensures image is valid and stores a copy of the image in the Wallsy folder.",
 )
 @click.option("--url", "-u")
+@click.version_option()  # reads version from setup.cfg metadata
 def cli(ctx, file, url):  # named cli by convention in the click docs
     """
     The best image modifier for custom wallpapers.
