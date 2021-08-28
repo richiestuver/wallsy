@@ -87,7 +87,7 @@ def cli(ctx, file, url):  # named cli by convention in the click docs
         $ wallsy random background
 
     2) Add a blur to an image and set it as the desktop background
-        $ wallsy load --file="my-wallpaper.jpg" effects --blur=20 background
+        $ wallsy --file="my-wallpaper.jpg" effects --blur=20 background
 
     3) Convert random "mountain" image to grayscale and save as "myphoto" to the 'documents' directory
 
@@ -134,6 +134,7 @@ def cli(ctx, file, url):  # named cli by convention in the click docs
         ctx.obj = dest_path
         return dest_path
 
+
 @cli.command()
 @click.option(
     "--file",
@@ -165,6 +166,7 @@ def add(file=None, url=None) -> Path:
 
     return _add
 
+
 @cli.command(name="random")
 @click.option("--query", "-q")
 def random(query):
@@ -181,8 +183,14 @@ def random(query):
 
     return _random
 
+
 @cli.command(name="blur")
-@click.option('--radius', default=5, show_default=True, help="Specify the pixel radius for blur effect.")
+@click.option(
+    "--radius",
+    default=5,
+    show_default=True,
+    help="Specify the pixel radius for blur effect.",
+)
 def blur(radius):
     """
     Apply a Gaussian blur effect to image. Default pixel radius for blur is 5.
@@ -202,12 +210,14 @@ def blur(radius):
 
     return _blur
 
+
 @cli.command()
 def noir():
     """
     Apply a noir effect to the image. Currently this only converts image to greyscale. May add
     additional enhancements (e.g. increase contrast) in the future.
     """
+
     @utils.require_filename
     def _noir(filename, *args, **kwargs):
         click.echo(f"Applying noir effect to {filename.name}")
@@ -215,21 +225,35 @@ def noir():
         click.echo(f"Saved new image as {filename.name}")
 
         return filename
+
     return _noir
 
+
 @cli.command()
-@click.option('--colors', default=16, show_default=True, help="Specify the number of colors to reduce the image to (range 1-255)")
+@click.option(
+    "--colors",
+    default=16,
+    show_default=True,
+    help="Specify the number of colors to reduce the image to (range 1-255)",
+)
 def posterize(colors):
     """
-    Apply a posterization effect to the image. 
+    Apply a posterization effect to the image.
     """
+
     @utils.require_filename
     def _posterize(filename, *args, **kwargs):
-        click.echo(f"Applying poster effect to {filename.name}. This may take a moment...")
-        filename = image_handler.quantize(filename, path_modifier="posterize", colors=colors)
+        click.echo(
+            f"Applying poster effect to {filename.name}. This may take a moment..."
+        )
+        filename = image_handler.quantize(
+            filename, path_modifier="posterize", colors=colors
+        )
         click.echo(f"Saved new image as {filename.name}")
         return filename
+
     return _posterize
+
 
 @cli.command(name="desktop")
 def update_desktop_wallpaper():
@@ -249,18 +273,18 @@ def update_desktop_wallpaper():
 
         if filename:
             wallpaper_dir = Path(os.getenv("WALLSY_WALLPAPER_DIR"))
-            
+
             try:
                 # note: copy2 attempts to preserve file metadata. other copy functions in shutil do not do so
                 shutil.copy2(filename, wallpaper_dir / filename.name)
                 click.echo(f"Added a copy of {filename.name} to {wallpaper_dir}")
             except SameFileError:
                 click.echo(f"{filename.name} is already located at {wallpaper_dir}")
-            
+
             wallpaper_handler.update_wallpaper(img_path=wallpaper_dir / filename.name)
             click.echo(f"Desktop wallpaper updated to {wallpaper_dir / filename.name}")
 
-        else:  # retrieve the currently set desktop wallpaper and use that as input for the pipeline 
+        else:  # retrieve the currently set desktop wallpaper and use that as input for the pipeline
             filename = wallpaper_handler.get_current_wallpaper()
             utils.load_file(file=filename)
 
