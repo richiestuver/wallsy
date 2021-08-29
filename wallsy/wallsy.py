@@ -20,6 +20,7 @@ from pathlib import Path
 from shutil import copy2, SameFileError
 
 import click
+from rich import print
 
 from wallsy import image_handler
 from wallsy import wallpaper_handler
@@ -36,19 +37,17 @@ The app
 
 """
 
-# TODO: implement queries on random command
-# TODO: figure out how to read exif data from a jpg to get important information
 # TODO: code cleanup - this thing is a huge mess right now
 # TODO: documentation - make sure everything has docstrings, every click.option has "help" kwarg
-#          every action has a click.echo() explanation and error handling is transparent and documented
+#          every action has a print() explanation and error handling is transparent and documented
 # TODO: rearchitecture - effects should become their own subcommands
+# TODO: add option to surpress messages for pipelining
+# TODO: add --overwrite option to disable saving each sub image
 # TODO: how to fix "stacking" of effects unintentionally. e.g. random grabs an image that is blurred and you blur it again
-# TODO: is it possible to support an unauthenticated random image from url?
 # TODO: refactor occurrences of os.path to pathlib.Path across app
 # TODO: notifications to user about save and retrieval
 # TODO: fix issue where mode after posterize is incompatible with other effects like blur (ValueError)
 # TODO: unit testing
-# TODO: random and effects
 # FUTURE: Support streams of input and not single images.
 
 
@@ -64,7 +63,11 @@ The app
     ),  # make sure that file paths are always Path objects.
     help="Load an image from file path. Ensures image is valid and stores a copy of the image in the Wallsy folder.",
 )
-@click.option("--url", "-u")
+@click.option(
+    "--url",
+    "-u",
+    help="Load an image directly via url. Must link directly to an image resouce, not an API endpoint. e.g. www.example.com/image.jpg",
+)
 @click.version_option()  # reads version from setup.cfg metadata
 def cli(
     ctx: click.Context, file: Path, url: str
@@ -128,14 +131,22 @@ def cli(
     except OSError:
         pass
 
-    ### If standard input is not part of a pipe, path must be specified by user in file or url option
+    """
+    INVOCATION METHOD 2: If standard input is not part of a pipe, path should be specified by user in file or url option. 
+    There are some subcommands which act as a source for file path input for later commands, so wallsy should not fail at this 
+    stage. As a result, it is necessary for each subcommand that explicitly requires a file path to apply the 
+    @require_filename decorator to make sure that necessary inputs are handled and raise relevant errors when missing.
+    """
+
+    dest_path = None
 
     if file is not None or url is not None:
         dest_path = utils.load_file(file, url)
-        # make dest_path available to other commands using the context object.
-        # does not appear that return value of group function is available in return_callback
+        # make dest_path available to the result callback via the Click Context object.
+        # it does not appear that the return value of this group function is available in return_callback
         ctx.obj = dest_path
-        return dest_path
+
+    return dest_path
 
 
 @cli.command()
@@ -203,7 +214,7 @@ def random(local: bool, keyword, dimensions):
         if local:
             img_set = list(Path(os.getenv("WALLSY_MEDIA_DIR")).iterdir())
             file = sample(img_set, 1)[0].resolve()
-            click.echo(f"Grabbed {file.name} from {os.getenv('WALLSY_MEDIA_DIR')}")
+            print(f"Grabbed {file.name} from {os.getenv('WALLSY_MEDIA_DIR')}")
 
         else:
             file = utils.load_file(
@@ -235,9 +246,9 @@ def blur(radius):
         """Callback for the effect subcommand"""
 
         if radius:
-            click.echo(f"Blurring {filename.name}...")
+            print(f"Blurring {filename.name}...")
             filename = image_handler.blur(filename, radius=int(radius))
-            click.echo(f"Saved new image as {filename.name}")
+            print(f"Saved new image as {filename.name}")
 
         return filename
 
@@ -253,9 +264,9 @@ def noir():
 
     @utils.require_filename
     def _noir(filename, *args, **kwargs):
-        click.echo(f"Applying noir effect to {filename.name}")
+        print(f"Applying noir effect to {filename.name}")
         filename = image_handler.greyscale(img_path=filename, path_modifier="noir")
-        click.echo(f"Saved new image as {filename.name}")
+        print(f"Saved new image as {filename.name}")
 
         return filename
 
@@ -276,13 +287,11 @@ def posterize(colors):
 
     @utils.require_filename
     def _posterize(filename, *args, **kwargs):
-        click.echo(
-            f"Applying poster effect to {filename.name}. This may take a moment..."
-        )
+        print(f"Applying poster effect to {filename.name}. This may take a moment...")
         filename = image_handler.quantize(
             filename, path_modifier="posterize", colors=colors
         )
-        click.echo(f"Saved new image as {filename.name}")
+        print(f"Saved new image as {filename.name}")
         return filename
 
     return _posterize
@@ -308,12 +317,12 @@ def update_desktop_wallpaper():
             try:
                 # note: copy2 attempts to preserve file metadata. other copy functions in shutil do not do so
                 shutil.copy2(filename, wallpaper_dir / filename.name)
-                click.echo(f"Added a copy of {filename.name} to {wallpaper_dir}")
+                print(f"Added a copy of {filename.name} to {wallpaper_dir}")
             except SameFileError:
-                click.echo(f"{filename.name} is already located at {wallpaper_dir}")
+                print(f"{filename.name} is already located at {wallpaper_dir}")
 
             wallpaper_handler.update_wallpaper(img_path=wallpaper_dir / filename.name)
-            click.echo(f"Desktop wallpaper updated to {wallpaper_dir / filename.name}")
+            print(f"Desktop wallpaper updated to {wallpaper_dir / filename.name}")
 
         else:  # retrieve the currently set desktop wallpaper and use that as input for the pipeline
             filename = wallpaper_handler.get_current_wallpaper()

@@ -6,6 +6,8 @@ certifi==2021.5.30
 cfgv==3.3.1
 chardet==4.0.0
 click==8.0.1
+colorama==0.4.4
+commonmark==0.9.1
 coverage==5.5
 distlib==0.3.2
 filelock==3.0.12
@@ -27,6 +29,7 @@ py==1.10.0
 pycairo==1.20.1
 pycodestyle==2.7.0
 pyflakes==2.3.1
+Pygments==2.10.0
 PyGObject==3.40.1
 pyparsing==2.4.7
 pytest==6.2.4
@@ -35,8 +38,9 @@ python-dotenv==0.18.0
 PyYAML==5.4.1
 regex==2021.4.4
 requests==2.25.1
+rich==10.9.0
 six==1.16.0
 toml==0.10.2
 urllib3==1.26.6
 virtualenv==20.7.2
--e git+https://github.com/richiestuver/gnomesplash.git@32d2a44928392f9e525b9edfd946f4eaf35aab15#egg=wallsy
+-e git+https://github.com/richiestuver/gnomesplash.git@4ca1ddf8ee3346ebef0ff88ff300abdc01dd402b#egg=wallsy
