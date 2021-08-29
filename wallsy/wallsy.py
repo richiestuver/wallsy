@@ -24,6 +24,7 @@ import click
 from wallsy import image_handler
 from wallsy import wallpaper_handler
 from wallsy import cli_utils as utils
+from wallsy import unsplash_handler
 
 
 """
@@ -35,8 +36,8 @@ The app
 
 """
 
-# TODO: write the unsplash handler to be a wrapper around the source.unsplash API
-# TODO: write random commmand so that it is effectively same behavior as current "wallsy --url" command with url specified as unsplash
+# TODO: implement queries on random command
+# TODO: figure out how to read exif data from a jpg to get important information
 # TODO: code cleanup - this thing is a huge mess right now
 # TODO: documentation - make sure everything has docstrings, every click.option has "help" kwarg
 #          every action has a click.echo() explanation and error handling is transparent and documented
@@ -170,8 +171,27 @@ def add(file=None, url=None) -> Path:
 
 
 @cli.command(name="random")
-@click.option("--local/--web", is_flag=True, default=False)
-def random(local: bool):
+@click.option(
+    "--local/--online",
+    is_flag=True,
+    show_default=True,
+    default=False,
+    help="Grab an image from Unsplash or locally from your wallsy folder.",
+)
+@click.option(
+    "--keyword",
+    "-q",
+    multiple=True,
+    help="Specify keyword to refine random results. Can use multiple times e.g. random -q pizza -q lemon",
+)
+@click.option(
+    "--size",
+    "-s",
+    "dimensions",
+    type=(int, int),
+    help="(--online only) specify dimensions of the image to retrieve, e.g. -s 1920 1080",
+)
+def random(local: bool, keyword, dimensions):
     """
     Generate a random image from source (default: Unsplash)
     """
@@ -186,8 +206,12 @@ def random(local: bool):
             click.echo(f"Grabbed {file.name} from {os.getenv('WALLSY_MEDIA_DIR')}")
 
         else:
-            url = "https://source.unsplash.com/random"
-            file = utils.load_file(url=url)
+            file = utils.load_file(
+                url=unsplash_handler.random_featured_photo(
+                    keywords=keyword if keyword else None,
+                    dimensions=dimensions if dimensions else None,
+                )
+            )
 
         return file
 
@@ -211,9 +235,8 @@ def blur(radius):
         """Callback for the effect subcommand"""
 
         if radius:
-            print(f"radius: {radius}")
             click.echo(f"Blurring {filename.name}...")
-            filename = image_handler.blur(filename, value=int(radius))
+            filename = image_handler.blur(filename, radius=int(radius))
             click.echo(f"Saved new image as {filename.name}")
 
         return filename
@@ -278,8 +301,6 @@ def update_desktop_wallpaper():
 
     def _update_desktop_wallpaper(filename, *args, **kwargs):
         """Callback for the background subcommand"""
-
-        # TODO: make it so that running desktop pumps the current wallpaper into the pipeline!!!!
 
         if filename:
             wallpaper_dir = Path(os.getenv("WALLSY_WALLPAPER_DIR"))

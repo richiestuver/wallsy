@@ -64,7 +64,7 @@ def download_image(url: str, file_path: str) -> Path:
         accesssible.
     .
         Attempt to save image at target file path. If file path does not exist, it will be created.
-        Default location is user's home directory. Returns the location on filesystem where image was saved.
+        Returns the location on filesystem where image was saved.
 
         If downloading image fails for one of various reasons, will raise an appropriate error instead of
         failing silently.
@@ -120,13 +120,17 @@ def download_image(url: str, file_path: str) -> Path:
         with Image.open(io.BytesIO(r.content)) as image:
 
             # add a check to see if we were redirected. this is useful in the case that a generic url is hit
-            # that redirects to an actual image resource. we want the path of the actual image resource to 
+            # that redirects to an actual image resource. we want the path of the actual image resource to
             # be the filename and not the generic url.
 
-            if url != r.url:  # r.url is the last effective url hit in a redirect sequence
-                destination_path = Path(destination_path.parent) / Path(urlparse(r.url).path).name
+            if (
+                url != r.url
+            ):  # r.url is the last effective url hit in a redirect sequence
+                destination_path = (
+                    Path(destination_path.parent) / Path(urlparse(r.url).path).name
+                )
 
-            # Note: should add a log for this somewhere. 
+            # Note: should add a log for this somewhere.
 
             if destination_path.suffix == "":
                 destination_path = Path(f"{destination_path}.{image.format.lower()}")
@@ -140,7 +144,12 @@ def download_image(url: str, file_path: str) -> Path:
     return destination_path
 
 
-def blur(img_path: Path, value=50, blur_func=ImageFilter.GaussianBlur) -> Path:
+def blur(
+    img_path: Path,
+    radius=50,
+    path_modifier: str = "blur",
+    blur_func=ImageFilter.GaussianBlur,
+) -> Path:
     """
     Apply a gaussian blur to a given image. Original image is unmodified.
 
@@ -148,13 +157,16 @@ def blur(img_path: Path, value=50, blur_func=ImageFilter.GaussianBlur) -> Path:
     """
 
     with Image.open(img_path) as image:
-        blur_effect = blur_func(radius=value)
+        blur_effect = blur_func(radius=radius)
         # blur_effect = ImageFilter.BLUR
         img_blur = image.filter(filter=blur_effect)
-        out = Path(f"{img_path.parent / img_path.stem}-blur{img_path.suffix}")
+        out = Path(
+            f"{img_path.parent / img_path.stem}-{path_modifier}{radius}{img_path.suffix}"
+        )
         img_blur.save(out)
 
         return out
+
 
 def greyscale(img_path: Path, path_modifier: str = "greyscale") -> Path:
     """
@@ -162,22 +174,26 @@ def greyscale(img_path: Path, path_modifier: str = "greyscale") -> Path:
     """
 
     with Image.open(img_path) as image:
-        img_greyscale = image.convert(mode='L')  # 'L' corresponds to 8-bit greyscale
-        out = Path(f"{img_path.parent / img_path.stem}-{path_modifier}{img_path.suffix}")
+        img_greyscale = image.convert(mode="L")  # 'L' corresponds to 8-bit greyscale
+        out = Path(
+            f"{img_path.parent / img_path.stem}-{path_modifier}{img_path.suffix}"
+        )
         img_greyscale.save(out)
 
         return out
 
 
-def quantize(img_path: Path, path_modifier: str = "quanitize", colors:int = 16) -> Path:
+def quantize(
+    img_path: Path, path_modifier: str = "quanitize", colors: int = 16
+) -> Path:
     """
     Helper function wraps the PIL quantization method. Opens image and writes image and saves
     new quantized image at img_path with the addition of the path_modifier to identify the new file.
 
     This is most useful for "posterization" effect by reducing the color space down to a small number.
-    According to this article from Adobe the human eye can most distinguish the effect when colors 
+    According to this article from Adobe the human eye can most distinguish the effect when colors
     are reduced to the range 1-35. https://www.adobe.com/creativecloud/photography/discover/posterize-photo.html
-    
+
     Another simple overview of posterization: https://www.cambridgeincolour.com/tutorials/posterization.htm
     """
 
@@ -188,5 +204,5 @@ def quantize(img_path: Path, path_modifier: str = "quanitize", colors:int = 16) 
         # after quantization our mode is "P" which has an alpha layer, not supported by jpg. Force to save as png.
         out = Path(f"{img_path.parent / img_path.stem}-{path_modifier}{colors}.png")
         img_quantized.save(out)
-    
+
         return out
