@@ -15,10 +15,11 @@ from shutil import copy2, SameFileError
 
 import click
 from rich import print
+from rich.console import Console
 
 from wallsy import image_handler
 from wallsy import wallpaper_handler
-from wallsy import utils as utils
+from wallsy import utils
 from wallsy import unsplash_handler
 
 
@@ -27,13 +28,14 @@ Wallsy CLI
 
 This module contains the Wallsy CLI app specification and command callback function definitions.
 
-The app 
-
 """
 
 # TODO: code cleanup - this thing is a huge mess right now
 # TODO: documentation - make sure everything has docstrings, every click.option has "help" kwarg
 #          every action has a print() explanation and error handling is transparent and documented
+# TODO: figure out how to load environment variables correctly
+# TODO: refactor config settings load to use a dataclass
+# TODO: refactor std out messaging architecture
 # TODO: rearchitecture - effects should become their own subcommands
 # TODO: add option to surpress messages for pipelining
 # TODO  add --prompt option to desktop
@@ -135,7 +137,11 @@ def cli(
     dest_path = None
 
     if file is not None or url is not None:
-        dest_path = utils.load(file, url)
+
+        try:
+            dest_path = utils.load(file, url)
+        except utils.WallsyLoadError:
+            print()
         # make dest_path available to the result callback via the Click Context object.
         # it does not appear that the return value of this group function is available in return_callback
         ctx.obj = dest_path
@@ -153,7 +159,7 @@ def cli(
     help="Load an image from file path. Ensures image is valid and stores a copy of the image in the Wallsy folder.",
 )
 @click.option("--url", "-u")
-def add(file=None, url=None) -> Path:
+def add(file=None, url=None):
     """
     Add an image to Wallsy pipeline and save to Wallsy folder.
     """
@@ -246,7 +252,7 @@ def blur(radius):
                 radius=int(radius),
                 dest_path=Path(os.getenv("WALLSY_EFFECTS_DIR")) / filename.name,
             )
-            print(f"Saved new image as {filename.name}")
+            print(f"Saved new image as {filename.name} in directory {filename.parent}")
 
         return filename
 
@@ -314,7 +320,7 @@ def update_desktop_wallpaper():
 
             try:
                 # note: copy2 attempts to preserve file metadata. other copy functions in shutil do not do so
-                shutil.copy2(filename, wallpaper_dir / filename.name)
+                copy2(filename, wallpaper_dir / filename.name)
                 print(f"Added a copy of {filename.name} to {wallpaper_dir}")
             except SameFileError:
                 print(f"{filename.name} is already located at {wallpaper_dir}")

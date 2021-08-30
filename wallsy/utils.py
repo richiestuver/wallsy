@@ -16,6 +16,18 @@ from rich import print
 import wallsy.image_handler as image_handler
 
 
+class WallsyLoadError(Exception):
+    """Raise when loading a resource from file or URL fails."""
+
+    pass
+
+
+class WallsyConfigError(Exception):
+    """Raise when an issue occurs with handling Wallsy configuration."""
+
+    pass
+
+
 @click.group()
 def cli():
     pass
@@ -28,7 +40,7 @@ def get_stdin() -> Path:
     if S_ISFIFO(os.stat(0).st_mode):
 
         file = Path(sys.stdin.read().strip())
-        click.echo(f"Read file from standard input: {file.name}")
+        print(f"Read file from standard input: {file.name}")
 
         return Path(file)
 
@@ -67,7 +79,7 @@ def load_config():
             return settings
 
     except Exception as error:
-        raise click.ClickException(error)
+        raise WallsyConfigError(error)
 
 
 def load(file=None, url=None) -> Path:
@@ -77,19 +89,16 @@ def load(file=None, url=None) -> Path:
 
     # Catch usage errors immediately on invocation.
     # At least one (but not both) of --file or --url are required.
+    error_msg = (
+        "Provide argument for at least one (and only one) of the following: file, url"
+    )
     if file is None and url is None:
-        msg = """Wallsy requires either a file path or url pointing to an image. Please provide either --file or --url options. 
-        
-        file: wallsy load --file="/path/to/my/photo.jpg"
-        url:  wallsy load --url="https://www.example.com/myphoto.jpg"
-        """
-        raise click.ClickException(msg)
+
+        raise WallsyLoadError(error_msg)
 
     if file is not None and url is not None:
-        msg = """Wallsy received conflicting options: --file and --url. Please choose one option and try again. 
-        """
 
-        raise click.UsageError(msg)
+        raise WallsyLoadError(error_msg)
 
     """set destination path for where the image should be stored. 
     images are intended to be modified so input paths shouldn't be 
@@ -113,15 +122,15 @@ def load(file=None, url=None) -> Path:
             image_handler.validate_image(file)
 
         except image_handler.InvalidImageError as error:
-            raise click.BadParameter(str(error))
+            raise WallsyLoadError(str(error))
 
         # copy the file contents to destination
         try:
             # Note that copy2 attempts to preserve metedata, other copy funcs in shutil do not
             copy2(file, dest_path)
-            click.echo(f"Copied {file.name} to {dest_path}")
+            print(f"Copied {file.name} to {dest_path}")
         except SameFileError:
-            click.echo(f"{file.name} is already located at {dest_path}")
+            print(f"{file.name} is already located at {dest_path}")
 
     """
     URL option
@@ -131,11 +140,11 @@ def load(file=None, url=None) -> Path:
         file_name = Path(urlparse(url).path).name
 
         try:
-            click.echo(f"Grabbing an image from {url}...")
+            print(f"Grabbing an image from {url}...")
             dest_path = image_handler.download_image(
                 url=url, file_path=dest_path / file_name
             )
-            click.echo(f"Downloaded image to {dest_path}")
+            print(f"Downloaded image to {dest_path}")
         except image_handler.ImageDownloadError as error:
             raise click.ClickException(str(error))
         except image_handler.InvalidImageError as error:
@@ -189,7 +198,7 @@ def require_filename(func):
         func_args = getcallargs(func, *args, **kwargs)
         if func_args.get("filename") is None:
             raise click.ClickException(
-                f"{func.__name__} did not receive a filename as part of pipeline. Did you run 'load' or 'random' to source an image?"
+                f"Command '{func.__name__}' did not receive a filename as part of pipeline. Did you run 'add' or 'random' to source an image?"
             )
         return func(*args, **kwargs)
 
