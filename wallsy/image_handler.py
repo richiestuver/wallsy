@@ -56,6 +56,9 @@ def validate_image(input) -> str:
     except UnidentifiedImageError:
         raise InvalidImageError(f"Input {str(input)} does not appear to be an image.")
 
+    except FileNotFoundError:
+        raise InvalidImageError(f"Input {str(input)} does not appear to be an image.")
+
 
 def download_image(url: str, file_path: str) -> Path:
     """

@@ -70,7 +70,7 @@ def load_config():
         raise click.ClickException(error)
 
 
-def load_file(file=None, url=None) -> Path:
+def load(file=None, url=None) -> Path:
     """
     Retrieve a new image from either local filesystem or URL (must point directly to an accessible image resource).
     """

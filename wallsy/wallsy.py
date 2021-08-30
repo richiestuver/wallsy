@@ -36,6 +36,7 @@ The app
 #          every action has a print() explanation and error handling is transparent and documented
 # TODO: rearchitecture - effects should become their own subcommands
 # TODO: add option to surpress messages for pipelining
+# TODO  add --prompt option to desktop
 # TODO: add --overwrite option to disable saving each sub image
 # TODO: refactor occurrences of os.path to pathlib.Path across app.
 # TODO: notifications to user about save and retrieval
@@ -134,7 +135,7 @@ def cli(
     dest_path = None
 
     if file is not None or url is not None:
-        dest_path = utils.load_file(file, url)
+        dest_path = utils.load(file, url)
         # make dest_path available to the result callback via the Click Context object.
         # it does not appear that the return value of this group function is available in return_callback
         ctx.obj = dest_path
@@ -160,13 +161,13 @@ def add(file=None, url=None) -> Path:
     def _add(filename, *args, **kwargs):
 
         if filename:
-            return utils.load_file(file=filename)
+            return utils.load(file=filename)
 
         elif file:
-            return utils.load_file(file=file)
+            return utils.load(file=file)
 
         elif url:
-            return utils.load_file(url=url)
+            return utils.load(url=url)
 
         else:
             raise click.UsageError("Add - No file or url specified ")
@@ -210,7 +211,7 @@ def random(local: bool, keyword, dimensions):
             print(f"Grabbed {file.name} from {os.getenv('WALLSY_MEDIA_DIR')}")
 
         else:
-            file = utils.load_file(
+            file = utils.load(
                 url=unsplash_handler.random_featured_photo(
                     keywords=keyword if keyword else None,
                     dimensions=dimensions if dimensions else None,
@@ -323,11 +324,23 @@ def update_desktop_wallpaper():
 
         else:  # retrieve the currently set desktop wallpaper and use that as input for the pipeline
             filename = wallpaper_handler.get_current_wallpaper()
-            utils.load_file(file=filename)
+            utils.load(file=filename)
 
         return filename
 
     return _update_desktop_wallpaper
+
+
+@cli.command()
+def show():
+    """Show the current image."""
+
+    @utils.require_filename
+    def _show(filename: Path, *args, **kwargs):
+        click.launch(str(filename))
+        return filename
+
+    return _show
 
 
 @cli.result_callback()
