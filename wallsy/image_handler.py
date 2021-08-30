@@ -149,6 +149,7 @@ def blur(
     radius=50,
     path_modifier: str = "blur",
     blur_func=ImageFilter.GaussianBlur,
+    dest_path: Path = None,
 ) -> Path:
     """
     Apply a gaussian blur to a given image. Original image is unmodified.
@@ -160,8 +161,12 @@ def blur(
         blur_effect = blur_func(radius=radius)
         # blur_effect = ImageFilter.BLUR
         img_blur = image.filter(filter=blur_effect)
+
+        if not dest_path:
+            dest_path = img_path
+
         out = Path(
-            f"{img_path.parent / img_path.stem}-{path_modifier}{radius}{img_path.suffix}"
+            f"{dest_path.parent / dest_path.stem}-{path_modifier}{radius}{dest_path.suffix}"
         )
         img_blur.save(out)
 

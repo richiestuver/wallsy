@@ -24,7 +24,7 @@ from rich import print
 
 from wallsy import image_handler
 from wallsy import wallpaper_handler
-from wallsy import cli_utils as utils
+from wallsy import utils as utils
 from wallsy import unsplash_handler
 
 
@@ -242,12 +242,16 @@ def blur(radius):
     """
 
     @utils.require_filename
-    def _blur(filename, *args, **kwargs):
+    def _blur(filename: Path, *args, **kwargs):
         """Callback for the effect subcommand"""
 
         if radius:
             print(f"Blurring {filename.name}...")
-            filename = image_handler.blur(filename, radius=int(radius))
+            filename = image_handler.blur(
+                filename,
+                radius=int(radius),
+                dest_path=Path(os.getenv("WALLSY_EFFECTS_DIR")) / filename.name,
+            )
             print(f"Saved new image as {filename.name}")
 
         return filename

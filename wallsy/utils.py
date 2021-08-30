@@ -11,6 +11,7 @@ from inspect import getcallargs
 from urllib.parse import urlparse
 
 import click
+from rich import print
 
 import wallsy.image_handler as image_handler
 
@@ -37,12 +38,13 @@ def get_stdin() -> Path:
 def init():
     """initialize the wallsy CLI app"""
 
-    settings = load_config()
+    settings: dict = load_config()
 
     # check for existence of wallsy folder in home dir and create if does not exist
-    wallsy_location = Path(settings["WALLSY_CONFIG_DIR"])
-    if not wallsy_location.exists():
-        wallsy_location.mkdir(parents=True, exist_ok=False)
+    for path in settings["paths"]:
+        path = Path(settings["paths"][path])
+        if not path.exists():
+            path.mkdir(parents=True, exist_ok=False)
 
     return settings
 
@@ -58,9 +60,10 @@ def load_config():
 
     try:
         with open(config_dir / "config.json", "r") as config:
-            settings = json.load(config)
-            for item in settings:
-                os.environ[item] = settings[item]
+            settings: dict = json.load(config)
+            # add paths to environment variables
+            for item in settings["paths"]:
+                os.environ[item] = settings["paths"][item]
             return settings
 
     except Exception as error:
@@ -156,9 +159,12 @@ def generate_config(config_dir):
     with open(config_dir / "config.json", "w") as config:
 
         config_data = {
-            "WALLSY_CONFIG_DIR": str(config_dir),
-            "WALLSY_MEDIA_DIR": str(wallsy_media),
-            "WALLSY_WALLPAPER_DIR": str(wallpaper_location),
+            "paths": {
+                "WALLSY_CONFIG_DIR": str(config_dir),
+                "WALLSY_MEDIA_DIR": str(wallsy_media),
+                "WALLSY_WALLPAPER_DIR": str(wallpaper_location),
+                "WALLSY_EFFECTS_DIR": str(wallsy_media / "effects"),
+            }
         }
 
         config_json = json.dump(config_data, config)
@@ -169,7 +175,7 @@ def reset():
     """remove wallsy folders and files from the config directory as part of an uninstall"""
 
     load_config()
-    shutil.rmtree(os.environ["wallsy_config_location"])
+    shutil.rmtree(os.environ["WALLSY_CONFIG_DIR"])
 
 
 def require_filename(func):
