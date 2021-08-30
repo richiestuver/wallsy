@@ -9,13 +9,7 @@ This module controls command line "routes" for interacting with the application.
 """
 
 import os
-import sys
-import json
-import shutil
 from random import sample
-from urllib.parse import urlparse
-from pathlib import Path
-from stat import S_ISFIFO
 from pathlib import Path
 from shutil import copy2, SameFileError
 
@@ -43,8 +37,7 @@ The app
 # TODO: rearchitecture - effects should become their own subcommands
 # TODO: add option to surpress messages for pipelining
 # TODO: add --overwrite option to disable saving each sub image
-# TODO: how to fix "stacking" of effects unintentionally. e.g. random grabs an image that is blurred and you blur it again
-# TODO: refactor occurrences of os.path to pathlib.Path across app
+# TODO: refactor occurrences of os.path to pathlib.Path across app.
 # TODO: notifications to user about save and retrieval
 # TODO: fix issue where mode after posterize is incompatible with other effects like blur (ValueError)
 # TODO: unit testing
@@ -280,7 +273,7 @@ def noir():
 @cli.command()
 @click.option(
     "--colors",
-    default=16,
+    default=32,
     show_default=True,
     help="Specify the number of colors to reduce the image to (range 1-255)",
 )
@@ -353,7 +346,7 @@ def process_pipeline(ctx, callbacks, *args, **kwargs):
     """
 
     """
-    Subcommand clobbering. If conflicting subcommands are provided, e.g. "load" and "random" which
+    Subcommand clobbering. If conflicting subcommands are provided, e.g. "add" and "random" which
     both output a filepath pointing toward a valid image, the one specified later in the pipeline
     will overwrite the results of the previous. 
     
