@@ -12,6 +12,9 @@ import os
 from random import sample
 from pathlib import Path
 from shutil import copy2, SameFileError
+from functools import wraps, update_wrapper, partial
+import inspect
+from typing import Optional
 
 import click
 from rich import print
@@ -20,6 +23,8 @@ from rich.console import Console
 from wallsy import image_handler
 from wallsy import wallpaper_handler
 from wallsy import utils
+from wallsy.utils import require_filename
+from wallsy.utils import make_callback
 from wallsy import unsplash_handler
 
 
@@ -34,11 +39,14 @@ This module contains the Wallsy CLI app specification and command callback funct
 # TODO: documentation - make sure everything has docstrings, every click.option has "help" kwarg
 #          every action has a print() explanation and error handling is transparent and documented
 # TODO: figure out how to load environment variables correctly
+# TODO: handle specifying a target file name for saves and what to do when a conflict occurs
+#           Prompt user for a new file name, don't create one?
 # TODO: refactor config settings load to use a dataclass
 # TODO: refactor std out messaging architecture
 # TODO: rearchitecture - effects should become their own subcommands
 # TODO: add option to surpress messages for pipelining
 # TODO  add --prompt option to desktop
+# TODO: moar effects - darken and lighten, and warhol effects
 # TODO: add --overwrite option to disable saving each sub image
 # TODO: refactor occurrences of os.path to pathlib.Path across app.
 # TODO: notifications to user about save and retrieval
@@ -140,8 +148,8 @@ def cli(
 
         try:
             dest_path = utils.load(file, url)
-        except utils.WallsyLoadError:
-            print()
+        except utils.WallsyLoadError as error:
+            print(f"There was an error trying to load the file: {error}")
         # make dest_path available to the result callback via the Click Context object.
         # it does not appear that the return value of this group function is available in return_callback
         ctx.obj = dest_path
@@ -159,36 +167,26 @@ def cli(
     help="Load an image from file path. Ensures image is valid and stores a copy of the image in the Wallsy folder.",
 )
 @click.option("--url", "-u")
-def add(file=None, url=None):
+@make_callback
+def add(from_pipeline, file=None, url=None):
     """
     Add an image to Wallsy pipeline and save to Wallsy folder.
     """
 
-    def _add(filename, *args, **kwargs):
+    if from_pipeline:
+        return utils.load(file=from_pipeline)
 
-        if filename:
-            return utils.load(file=filename)
+    elif file:
+        return utils.load(file=file)
 
-        elif file:
-            return utils.load(file=file)
+    elif url:
+        return utils.load(url=url)
 
-        elif url:
-            return utils.load(url=url)
-
-        else:
-            raise click.UsageError("Add - No file or url specified ")
-
-    return _add
+    else:
+        raise click.UsageError("Add - No file or url specified ")
 
 
 @cli.command(name="random")
-@click.option(
-    "--local/--online",
-    is_flag=True,
-    show_default=True,
-    default=False,
-    help="Grab an image from Unsplash or locally from your wallsy folder.",
-)
 @click.option(
     "--keyword",
     "-q",
@@ -202,31 +200,35 @@ def add(file=None, url=None):
     type=(int, int),
     help="(--online only) specify dimensions of the image to retrieve, e.g. -s 1920 1080",
 )
-def random(local: bool, keyword, dimensions):
+@click.option(
+    "--local/--online",
+    is_flag=True,
+    show_default=True,
+    default=False,
+    help="Grab an image from Unsplash or locally from your wallsy folder.",
+)
+@make_callback
+def random(filename, keyword, dimensions, local):
     """
     Generate a random image from source (default: Unsplash)
     """
 
-    def _random(*args, **kwargs) -> Path:
+    file = None
 
-        file = None
+    if local:
+        img_set = list(Path(os.getenv("WALLSY_MEDIA_DIR")).iterdir())
+        file = sample(img_set, 1)[0].resolve()
+        print(f"Grabbed {file.name} from {os.getenv('WALLSY_MEDIA_DIR')}")
 
-        if local:
-            img_set = list(Path(os.getenv("WALLSY_MEDIA_DIR")).iterdir())
-            file = sample(img_set, 1)[0].resolve()
-            print(f"Grabbed {file.name} from {os.getenv('WALLSY_MEDIA_DIR')}")
-
-        else:
-            file = utils.load(
-                url=unsplash_handler.random_featured_photo(
-                    keywords=keyword if keyword else None,
-                    dimensions=dimensions if dimensions else None,
-                )
+    else:
+        file = utils.load(
+            url=unsplash_handler.random_featured_photo(
+                keywords=keyword if keyword else None,
+                dimensions=dimensions if dimensions else None,
             )
+        )
 
-        return file
-
-    return _random
+    return file
 
 
 @cli.command(name="blur")
@@ -235,46 +237,38 @@ def random(local: bool, keyword, dimensions):
     default=5,
     show_default=True,
     help="Specify the pixel radius for blur effect.",
-)
-def blur(radius):
+)  # note that click options are passed to the decorated command as keyword arguments. so should be specified after positional in the signature
+@make_callback
+@require_filename
+def blur(filename: Path, radius):
     """
     Apply a Gaussian blur effect to image. Default pixel radius for blur is 5.
     """
 
-    @utils.require_filename
-    def _blur(filename: Path, *args, **kwargs):
-        """Callback for the effect subcommand"""
+    if radius:
+        print(f"Blurring {filename.name}...")
+        filename = image_handler.blur(
+            filename,
+            radius=int(radius),
+            dest_path=Path(os.getenv("WALLSY_EFFECTS_DIR")) / filename.name,
+        )
+        print(f"Saved new image as {filename.name} in directory {filename.parent}")
 
-        if radius:
-            print(f"Blurring {filename.name}...")
-            filename = image_handler.blur(
-                filename,
-                radius=int(radius),
-                dest_path=Path(os.getenv("WALLSY_EFFECTS_DIR")) / filename.name,
-            )
-            print(f"Saved new image as {filename.name} in directory {filename.parent}")
-
-        return filename
-
-    return _blur
+    return filename
 
 
 @cli.command()
-def noir():
-    """
-    Apply a noir effect to the image. Currently this only converts image to greyscale. May add
+@make_callback
+@require_filename
+def noir(filename):
+    """Apply a noir effect to the image. Currently this only converts image to greyscale. May add
     additional enhancements (e.g. increase contrast) in the future.
     """
+    print(f"Applying noir effect to {filename.name}")
+    filename = image_handler.greyscale(img_path=filename, path_modifier="noir")
+    print(f"Saved new image as {filename.name}")
 
-    @utils.require_filename
-    def _noir(filename, *args, **kwargs):
-        print(f"Applying noir effect to {filename.name}")
-        filename = image_handler.greyscale(img_path=filename, path_modifier="noir")
-        print(f"Saved new image as {filename.name}")
-
-        return filename
-
-    return _noir
+    return filename
 
 
 @cli.command()
@@ -284,69 +278,56 @@ def noir():
     show_default=True,
     help="Specify the number of colors to reduce the image to (range 1-255)",
 )
-def posterize(colors):
+@make_callback
+@require_filename
+def posterize(filename: Path, colors: int):
     """
     Apply a posterization effect to the image.
     """
 
-    @utils.require_filename
-    def _posterize(filename, *args, **kwargs):
-        print(f"Applying poster effect to {filename.name}. This may take a moment...")
-        filename = image_handler.quantize(
-            filename, path_modifier="posterize", colors=colors
-        )
-        print(f"Saved new image as {filename.name}")
-        return filename
-
-    return _posterize
+    print(f"Applying poster effect to {filename.name}. This may take a moment...")
+    filename = image_handler.quantize(
+        filename, path_modifier="posterize", colors=colors
+    )
+    print(f"Saved new image as {filename.name}")
+    return filename
 
 
 @cli.command(name="desktop")
-def update_desktop_wallpaper():
+@make_callback
+def update_desktop_wallpaper(filename):
     """
     Update the desktop background with the specified image.
     """
 
-    ###
-    # perform any checks that should fail the pipeline entirely here, before
-    # the inner function definition.
-    ###
+    if filename:
+        wallpaper_dir = Path(os.getenv("WALLSY_WALLPAPER_DIR"))
 
-    def _update_desktop_wallpaper(filename, *args, **kwargs):
-        """Callback for the background subcommand"""
+        try:
+            # note: copy2 attempts to preserve file metadata. other copy functions in shutil do not do so
+            copy2(filename, wallpaper_dir / filename.name)
+            print(f"Added a copy of {filename.name} to {wallpaper_dir}")
+        except SameFileError:
+            print(f"{filename.name} is already located at {wallpaper_dir}")
 
-        if filename:
-            wallpaper_dir = Path(os.getenv("WALLSY_WALLPAPER_DIR"))
+        wallpaper_handler.update_wallpaper(img_path=wallpaper_dir / filename.name)
+        print(f"Desktop wallpaper updated to {wallpaper_dir / filename.name}")
 
-            try:
-                # note: copy2 attempts to preserve file metadata. other copy functions in shutil do not do so
-                copy2(filename, wallpaper_dir / filename.name)
-                print(f"Added a copy of {filename.name} to {wallpaper_dir}")
-            except SameFileError:
-                print(f"{filename.name} is already located at {wallpaper_dir}")
+    else:  # retrieve the currently set desktop wallpaper and use that as input for the pipeline
+        filename = wallpaper_handler.get_current_wallpaper()
+        utils.load(file=filename)
 
-            wallpaper_handler.update_wallpaper(img_path=wallpaper_dir / filename.name)
-            print(f"Desktop wallpaper updated to {wallpaper_dir / filename.name}")
-
-        else:  # retrieve the currently set desktop wallpaper and use that as input for the pipeline
-            filename = wallpaper_handler.get_current_wallpaper()
-            utils.load(file=filename)
-
-        return filename
-
-    return _update_desktop_wallpaper
+    return filename
 
 
 @cli.command()
-def show():
+@make_callback
+@require_filename
+def show(filename: Path):
     """Show the current image."""
 
-    @utils.require_filename
-    def _show(filename: Path, *args, **kwargs):
-        click.launch(str(filename))
-        return filename
-
-    return _show
+    click.launch(str(filename))
+    return filename
 
 
 @cli.result_callback()
@@ -393,3 +374,7 @@ def process_pipeline(ctx, callbacks, *args, **kwargs):
 
     for callback in callbacks:
         filename = callback(filename)
+
+
+if __name__ == "__main__":
+    pass

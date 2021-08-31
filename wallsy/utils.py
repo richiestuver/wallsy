@@ -7,13 +7,14 @@ from stat import S_ISFIFO
 from pathlib import Path
 from shutil import copy2, SameFileError
 from functools import wraps
+from functools import partial
 from inspect import getcallargs
 from urllib.parse import urlparse
 
 import click
 from rich import print
 
-import wallsy.image_handler as image_handler
+from wallsy import image_handler
 
 
 class WallsyLoadError(Exception):
@@ -39,7 +40,7 @@ def get_stdin() -> Path:
     # 0 is the FD for std in, 1 = stdout, 2 = stderr
     if S_ISFIFO(os.stat(0).st_mode):
 
-        file = Path(sys.stdin.read().strip())
+        file = Path(sys.stdin.read().strip()).expanduser().resolve()
         print(f"Read file from standard input: {file.name}")
 
         return Path(file)
@@ -114,7 +115,7 @@ def load(file=None, url=None) -> Path:
     if file:
 
         # if file is not a Path, (can also be str or TextIOBuffer), convert to Path
-        file = Path(file)
+        file = Path(file).expanduser().resolve()
         dest_path = dest_path / file.name
 
         # validate that the input file is a valid image.
@@ -185,6 +186,51 @@ def reset():
 
     load_config()
     shutil.rmtree(os.environ["WALLSY_CONFIG_DIR"])
+
+
+"""
+DECORATORS
+"""
+
+
+def make_callback(func):
+    """
+    Receive a function (presumably, that does not itself return a function) and convert it into a new function that returns the
+    original function as a callback function.
+
+    The Wallsy CLI is built on a callback architecture. Subcommands are invoked on the command line, each of which return a callback function
+    immediately upon invocation. Once all subcommands have been invoked, a separate "process callbacks" function iterates over each of the callback
+    function objects and executes them. When a function is decorated with make_callback, the callback itself will have the
+    same signature and behave exactly as the original function. The invoking the origianl function name, on the otherhand, merely returns the callback
+    which now must be invoked to actually execute the original function body.
+
+    It is possible to achieve the same behavior by manually defining an inner function within each subcommand function definition. Similar to:
+
+        def my_command(cli_args):  # any args received from command line invocation
+
+            # any actions that would be performed immediately upon command invocation here
+
+            def my_callback(callback_args)  # any args required for callback but not supplied directly on command line
+
+                # body of command logic in here, processed by callback processor at a later time
+
+                return whatever_you_need_to_for_other_command_callbacks_etc
+
+            return my_callback
+
+    However, the benefit to using the callback factory pattern here is that it eliminates all of the boilerplate code for doing so and reduces the
+    function body to only the logic necessary for performing the desired action of the command itsef.
+    """
+
+    @wraps(func)
+    def callback(*args, **kwargs):
+        def wrapper(*fargs, **fkwargs):
+            new_func = partial(func, *args, **kwargs)
+            return new_func(*fargs, **fkwargs)
+
+        return wrapper
+
+    return callback
 
 
 def require_filename(func):
