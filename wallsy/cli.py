@@ -19,7 +19,10 @@ from rich.console import Console
 
 from wallsy import image_handler
 from wallsy import wallpaper_handler
-from wallsy import utils
+from wallsy.utils import init
+from wallsy.utils import get_stdin
+from wallsy.utils import load
+from wallsy.utils import WallsyLoadError
 from wallsy.utils import require_file
 from wallsy.utils import make_callback
 from wallsy import unsplash_handler
@@ -121,13 +124,13 @@ def cli(
     https://docs.python.org/3/library/os.html#os.stat_result
     """
 
-    settings = utils.init()
+    settings = init()
 
     # Check if wallsy is being used as part of a command pipeline, by checking if
     # there is a value for standard input.
 
     try:
-        file = utils.get_stdin()
+        file = get_stdin()
 
     except OSError:
         pass
@@ -144,8 +147,8 @@ def cli(
     if file is not None or url is not None:
 
         try:
-            dest_path = utils.load(file, url)
-        except utils.WallsyLoadError as error:
+            dest_path = load(file, url)
+        except WallsyLoadError as error:
             print(f"There was an error trying to load the file: {error}")
         # make dest_path available to the result callback via the Click Context object.
         # it does not appear that the return value of this group function is available in return_callback
@@ -171,13 +174,13 @@ def add(file_from_pipeline, file=None, url=None):
     """
 
     if file_from_pipeline:
-        return utils.load(file=file_from_pipeline)
+        return load(file=file_from_pipeline)
 
     elif file:
-        return utils.load(file=file)
+        return load(file=file)
 
     elif url:
-        return utils.load(url=url)
+        return load(url=url)
 
     else:
         raise click.UsageError("Add - No file or url specified ")
@@ -230,7 +233,7 @@ def random(file_from_pipeline, keyword, dimensions, local):
         print(f"Grabbed {file.name} from {os.getenv('WALLSY_MEDIA_DIR')}")
 
     else:
-        file = utils.load(
+        file = load(
             url=unsplash_handler.random_featured_photo(
                 keywords=keyword if keyword else None,
                 dimensions=dimensions if dimensions else None,
@@ -322,7 +325,7 @@ def update_desktop_wallpaper(file):
 
     else:  # retrieve the currently set desktop wallpaper and use that as input for the pipeline
         file = wallpaper_handler.get_current_wallpaper()
-        utils.load(file=file)
+        file = load(file=file)
 
     return file
 
@@ -377,7 +380,6 @@ def process_pipeline(ctx, callbacks, *args, **kwargs):
     are generally those used to source an image for processing, e.g. "load" or "random"
     """
 
-    print(args, kwargs)
     file = ctx.obj
 
     for callback in callbacks:
