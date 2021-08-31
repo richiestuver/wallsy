@@ -12,9 +12,6 @@ import os
 from random import sample
 from pathlib import Path
 from shutil import copy2, SameFileError
-from functools import wraps, update_wrapper, partial
-import inspect
-from typing import Optional
 
 import click
 from rich import print
