@@ -233,7 +233,7 @@ def make_callback(func):
     return callback
 
 
-def require_filename(func):
+def require_file(func):
     """
     Decorator for callbacks that require a filename to be explicitly passed in order to perform
     desired action. This decorator abstracts checking for this parameter and raises the necessary exception.
@@ -242,7 +242,7 @@ def require_filename(func):
     @wraps(func)
     def wrapper(*args, **kwargs):
         func_args = getcallargs(func, *args, **kwargs)
-        if func_args.get("filename") is None:
+        if func_args.get("file") is None:
             raise click.ClickException(
                 f"Command '{func.__name__}' did not receive a filename as part of pipeline. Did you run 'add' or 'random' to source an image?"
             )
