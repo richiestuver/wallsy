@@ -165,13 +165,13 @@ def cli(
 )
 @click.option("--url", "-u")
 @make_callback
-def add(from_pipeline, file=None, url=None):
+def add(file_from_pipeline, file=None, url=None):
     """
     Add an image to Wallsy pipeline and save to Wallsy folder.
     """
 
-    if from_pipeline:
-        return utils.load(file=from_pipeline)
+    if file_from_pipeline:
+        return utils.load(file=file_from_pipeline)
 
     elif file:
         return utils.load(file=file)
@@ -205,10 +205,22 @@ def add(from_pipeline, file=None, url=None):
     help="Grab an image from Unsplash or locally from your wallsy folder.",
 )
 @make_callback
-def random(filename, keyword, dimensions, local):
+def random(file_from_pipeline, keyword, dimensions, local):
     """
-    Generate a random image from source (default: Unsplash)
+    Generate a random image from source (default: Unsplash).
+
+    Note: file_from_pipeline is the only argument passed to the callback function in the process_pipeline stage. This argument is
+    used by nearly all commands to operate on the currently active image. The random command, however, is intended to generate
+    new filenames for use by subsequent commands on the pipeline. If random is specified somewhere in the middle of a chain
+    of commands, the current behavior is to "ignore" input all previous commands and generate a new filename as usual.
+    While probably unintended usage, this could have limited utility in the case a user wants to perform processing on a small
+    finite number of files in a single line on the terminal.
     """
+
+    if file_from_pipeline:
+        print(
+            f"Warning: {__name__} received a file from a previous command. Ignoring that file and generating a new random image."
+        )
 
     file = None
 
@@ -321,7 +333,7 @@ def update_desktop_wallpaper(filename):
 @make_callback
 @require_filename
 def show(filename: Path):
-    """Show the current image."""
+    """Show the current image using the default application for the OS."""
 
     click.launch(str(filename))
     return filename
