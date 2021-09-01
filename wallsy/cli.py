@@ -19,13 +19,14 @@ from rich.console import Console
 
 from wallsy import image_handler
 from wallsy import wallpaper_handler
+from wallsy import unsplash_handler
+
 from wallsy.utils import init
 from wallsy.utils import get_stdin
 from wallsy.utils import load
 from wallsy.utils import WallsyLoadError
 from wallsy.utils import require_file
 from wallsy.utils import make_callback
-from wallsy import unsplash_handler
 
 
 """

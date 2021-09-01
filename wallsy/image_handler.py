@@ -76,6 +76,7 @@ def download_image(url: str, file_path: str) -> Path:
     """
 
     destination_path = Path(file_path).expanduser().resolve()
+    print(destination_path)
 
     # prevent overwriting an existing file. this is a design decision to prevent unintentional deletions
 
@@ -84,6 +85,10 @@ def download_image(url: str, file_path: str) -> Path:
             destination_path.parent.mkdir(parents=True, exist_ok=True)
         except FileExistsError:
             raise FileExistsError(f"Error trying to create {str(destination_path)}.")
+
+    # edge case where destination path is a folder
+    elif destination_path.is_dir():
+        raise IsADirectoryError(f"Destination file {destination_path} is a directory.")
 
     else:
         raise FileExistsError(f"File already exists at {destination_path}.")

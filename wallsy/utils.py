@@ -138,7 +138,21 @@ def load(file=None, url=None) -> Path:
     """
     if url:
 
+        # let's try to prevent as many obviously invalid requests from getting through
+        # as is realistically possible.
+
+        # if there is no path component to the url, the provided url is
+        # (almost) certainly not a direct link to an image resource.
+        # e.g. https://example.com/  -> path is ""
+        #      https://example.com/mycat.jpg  -> path is /mycat.jpg
+        if urlparse(url).path in ("", "/"):
+            raise WallsyLoadError(
+                "Please specify a link directly to an image resource."
+            )
+
         file_name = Path(urlparse(url).path).name
+
+        print(f"filename: {file_name}")
 
         try:
             print(f"Grabbing an image from {url}...")
@@ -147,9 +161,11 @@ def load(file=None, url=None) -> Path:
             )
             print(f"Downloaded image to {dest_path}")
         except image_handler.ImageDownloadError as error:
-            raise click.ClickException(str(error))
+            raise WallsyLoadError(str(error))
         except image_handler.InvalidImageError as error:
-            raise click.BadParameter(str(error))
+            raise WallsyLoadError(str(error))
+        except Exception as error:
+            raise WallsyLoadError(f"Something unexpected happened: {error}")
 
     # if we get this far, we should have a validated image. make the path available to other
     # subcommands by storing in the click context's object attribute (which is designed for this purpose)
