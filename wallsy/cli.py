@@ -17,16 +17,16 @@ import click
 from rich import print
 from rich.console import Console
 
-from wallsy import image_handler
-from wallsy import wallpaper_handler
-from wallsy import unsplash_handler
+from . import image_handler
+from . import wallpaper_handler
+from . import unsplash_handler
 
-from wallsy.utils import init
-from wallsy.utils import get_stdin
-from wallsy.utils import load
-from wallsy.utils import WallsyLoadError
-from wallsy.utils import require_file
-from wallsy.utils import make_callback
+from .utils import init
+from .utils import get_stdin
+from .utils import load
+from .utils import WallsyLoadError
+from .utils import require_file
+from .utils import make_callback
 
 
 """
@@ -42,6 +42,7 @@ This module contains the Wallsy CLI app specification and command callback funct
 # TODO: figure out how to load environment variables correctly
 # TODO: handle specifying a target file name for saves and what to do when a conflict occurs
 #           Prompt user for a new file name, don't create one?
+# TODO: implement scheduler!!!!
 # TODO: prevent non image files from getting picked up by random --local
 # TODO: refactor config settings load to use a dataclass
 # TODO: refactor std out messaging architecture

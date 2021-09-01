@@ -152,8 +152,6 @@ def load(file=None, url=None) -> Path:
 
         file_name = Path(urlparse(url).path).name
 
-        print(f"filename: {file_name}")
-
         try:
             print(f"Grabbing an image from {url}...")
             dest_path = image_handler.download_image(
