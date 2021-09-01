@@ -1,7 +1,9 @@
 repos:
   - repo: https://github.com/psf/black
-    rev: 21.7b0 # Replace by any tag/version: https://github.com/psf/black/tags
+    rev: 21.8b0 # Replace by any tag/version: https://github.com/psf/black/tags
     hooks:
       - id: black
+        args:
+            - --check
         language_version: python3 # Should be a command that runs python3.6+
 
