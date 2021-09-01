@@ -386,6 +386,7 @@ def process_pipeline(ctx, callbacks, *args, **kwargs):
     file = ctx.obj
 
     for callback in callbacks:
+        print(callback.__name__)
         file = callback(file)
 
 

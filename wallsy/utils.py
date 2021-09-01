@@ -238,6 +238,7 @@ def make_callback(func):
 
     @wraps(func)
     def callback(*args, **kwargs):
+        @wraps(func)
         def wrapper(*fargs, **fkwargs):
             new_func = partial(func, *args, **kwargs)
             return new_func(*fargs, **fkwargs)
