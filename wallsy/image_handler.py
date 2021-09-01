@@ -76,7 +76,6 @@ def download_image(url: str, file_path: str) -> Path:
     """
 
     destination_path = Path(file_path).expanduser().resolve()
-    print(destination_path)
 
     # prevent overwriting an existing file. this is a design decision to prevent unintentional deletions
 
