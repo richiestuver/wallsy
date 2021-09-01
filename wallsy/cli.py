@@ -42,6 +42,7 @@ This module contains the Wallsy CLI app specification and command callback funct
 # TODO: figure out how to load environment variables correctly
 # TODO: handle specifying a target file name for saves and what to do when a conflict occurs
 #           Prompt user for a new file name, don't create one?
+# TODO: prevent non image files from getting picked up by random --local
 # TODO: refactor config settings load to use a dataclass
 # TODO: refactor std out messaging architecture
 # TODO: rearchitecture - effects should become their own subcommands
