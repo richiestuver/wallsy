@@ -83,11 +83,6 @@ class WallsyConfig:
 
         # serialize to json and report any errors
 
-        # config_dict = asdict(self)
-        # for item in config_dict:
-        #     if type(config_dict[item]) == PosixPath:
-        #         config_dict[item] == str(config_dict[item])
-
         try:
             to_json = json.dumps(
                 asdict(self), sort_keys=True, indent=4, cls=PathEncoder

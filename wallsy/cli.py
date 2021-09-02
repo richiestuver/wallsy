@@ -141,7 +141,7 @@ def cli(
     # there is a value for standard input.
 
     try:
-        file = get_stdin()
+        file: Path = get_stdin()
 
     except OSError:
         pass
@@ -186,7 +186,7 @@ def cli(
 )
 @click.option("--url", "-u")
 @make_callback
-def add(file_from_pipeline, file=None, url=None):
+def add(file_from_pipeline: Path, file: str = None, url: str = None):
     """
     Add an image to Wallsy pipeline and save to Wallsy folder.
     """
@@ -227,7 +227,7 @@ def add(file_from_pipeline, file=None, url=None):
     help="Grab an image from Unsplash or locally from your wallsy folder.",
 )
 @make_callback
-def random(obj, file_from_pipeline, keyword, dimensions, local):
+def random(obj: WallsyData, file_from_pipeline, keyword, dimensions, local):
     """
     Generate a random image from source (default: Unsplash).
 
@@ -272,7 +272,7 @@ def random(obj, file_from_pipeline, keyword, dimensions, local):
 )  # note that click options are passed to the decorated command as keyword arguments. so should be specified after positional in the signature
 @make_callback
 @require_file
-def blur(obj, file: Path, radius):
+def blur(obj: WallsyData, file: Path, radius):
     """
     Apply a Gaussian blur effect to image. Default pixel radius for blur is 5.
     """
@@ -326,7 +326,7 @@ def posterize(file: Path, colors: int):
 @cli.command(name="desktop")
 @click.pass_obj
 @make_callback
-def update_desktop_wallpaper(obj, file):
+def update_desktop_wallpaper(obj: WallsyData, file):
     """
     Update the desktop background with the specified image.
     """
@@ -335,7 +335,6 @@ def update_desktop_wallpaper(obj, file):
         wallpaper_dir = obj.config.WALLSY_WALLPAPER_DIR
 
         try:
-            print("file: ", file)
             # note: copy2 attempts to preserve file metadata. other copy functions in shutil do not do so
             copy2(file, wallpaper_dir / file.name)
             print(f"Added a copy of {file.name} to {wallpaper_dir}")
@@ -363,8 +362,8 @@ def show(file: Path):
 
 
 @cli.result_callback()
-@click.pass_context
-def process_pipeline(ctx, callbacks, *args, **kwargs):
+@click.pass_obj
+def process_pipeline(obj: WallsyData, callbacks, *args, **kwargs):
     """
     The result_callback decorator supplies this function with an argument containing all of the return values from
     the invoked subcommands, as well as all of the arguments supplied to the main group() function itself. By returning an inner function from each subcommand, we can control the order of execution
@@ -402,7 +401,7 @@ def process_pipeline(ctx, callbacks, *args, **kwargs):
     are generally those used to source an image for processing, e.g. "load" or "random"
     """
 
-    file = ctx.obj.file
+    file = obj.file
 
     for callback in callbacks:
         print(callback.__name__, end=" ")

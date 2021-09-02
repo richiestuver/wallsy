@@ -152,29 +152,6 @@ def load(file=None, url=None) -> Path:
     return dest_path
 
 
-# def generate_config(config_dir):
-#     """Create a new config file at appropriate location if one is not detected"""
-
-#     # storage for user generated wallsy media
-#     wallsy_media = Path("~/wallsy").expanduser()
-
-#     # save location for wallpapers when updating desktop wallpapers
-#     wallpaper_location = Path("~/.local/share/backgrounds").expanduser()
-
-#     with open(config_dir / "config.json", "w") as config:
-
-#         config_data = {
-#             "paths": {
-#                 "WALLSY_CONFIG_DIR": str(config_dir),
-#                 "WALLSY_MEDIA_DIR": str(wallsy_media),
-#                 "WALLSY_WALLPAPER_DIR": str(wallpaper_location),
-#                 "WALLSY_EFFECTS_DIR": str(wallsy_media / "effects"),
-#             }
-#         }
-
-#         config_json = json.dump(config_data, config)
-
-
 @cli.command()
 def reset():
     """remove wallsy folders and files from the config directory as part of an uninstall"""
