@@ -9,7 +9,7 @@ This module controls command line "routes" for interacting with the application.
 """
 
 import os
-from collections import namedtuple
+from typing import Optional
 from random import sample
 from pathlib import Path
 from shutil import copy2, SameFileError
@@ -82,7 +82,7 @@ This module contains the Wallsy CLI app specification and command callback funct
 @click.version_option()  # reads version from setup.cfg metadata
 def cli(
     ctx: click.Context, file: Path, url: str
-) -> Path:  # named cli by convention in the click docs
+) -> Optional[Path]:  # named cli by convention in the click docs
     """
     The best image modifier for custom wallpapers.
 

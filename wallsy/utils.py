@@ -31,6 +31,11 @@ class WallsyLoadError(Exception):
 
 @dataclass
 class WallsyData:
+    """
+    Used to store application data for purpose of passing around subcommands. Currently stores the
+    existing config settings (contains common directories) and the initial input file stream.
+    """
+
     config: WallsyConfig
     file: Optional[Path] = None
 
