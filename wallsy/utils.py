@@ -2,6 +2,8 @@ import os
 import sys
 import json
 import shutil
+from typing import Optional
+from dataclasses import dataclass
 from pathlib import Path
 from stat import S_ISFIFO
 from pathlib import Path
@@ -16,6 +18,10 @@ from rich import print
 
 from wallsy import image_handler
 
+from .config import WallsyConfig
+from .config import WallsyConfigError
+from .config import load_config
+
 
 class WallsyLoadError(Exception):
     """Raise when loading a resource from file or URL fails."""
@@ -23,10 +29,10 @@ class WallsyLoadError(Exception):
     pass
 
 
-class WallsyConfigError(Exception):
-    """Raise when an issue occurs with handling Wallsy configuration."""
-
-    pass
+@dataclass
+class WallsyData:
+    config: WallsyConfig
+    file: Optional[Path] = None
 
 
 @click.group()
@@ -35,6 +41,10 @@ def cli():
 
 
 def get_stdin() -> Path:
+    """
+    Check for a pipeline by reading the file handler for standard input and read the text content
+    if there is a value on this stream. Return this value as a Path.
+    """
 
     # S_ISFIFO determines if the mode (file type and permissions) of a given file descriptor refers to a pipe.
     # 0 is the FD for std in, 1 = stdout, 2 = stderr
@@ -46,41 +56,6 @@ def get_stdin() -> Path:
         return Path(file)
 
     raise OSError("Stdin check: no pipeline detected for standard input.")
-
-
-def init():
-    """initialize the wallsy CLI app"""
-
-    settings: dict = load_config()
-
-    # check for existence of wallsy folder in home dir and create if does not exist
-    for path in settings["paths"]:
-        path = Path(settings["paths"][path])
-        if not path.exists():
-            path.mkdir(parents=True, exist_ok=False)
-
-    return settings
-
-
-def load_config():
-    """Get configuration settings for Wallsy."""
-
-    config_dir = Path("~/.config/wallsy").expanduser()
-
-    if not config_dir.exists():
-        config_dir.mkdir(parents=True, exist_ok=False)
-        generate_config(config_dir)
-
-    try:
-        with open(config_dir / "config.json", "r") as config:
-            settings: dict = json.load(config)
-            # add paths to environment variables
-            for item in settings["paths"]:
-                os.environ[item] = settings["paths"][item]
-            return settings
-
-    except Exception as error:
-        raise WallsyConfigError(error)
 
 
 def load(file=None, url=None) -> Path:
@@ -107,7 +82,8 @@ def load(file=None, url=None) -> Path:
     in the future maybe allow this to be specified as an option to 
     modify the input file. e.g. --no-save"""
 
-    dest_path = Path(os.environ["WALLSY_MEDIA_DIR"])
+    config = load_config()
+    dest_path = config.WALLSY_MEDIA_DIR
 
     """
     FILE option
@@ -171,27 +147,27 @@ def load(file=None, url=None) -> Path:
     return dest_path
 
 
-def generate_config(config_dir):
-    """Create a new config file at appropriate location if one is not detected"""
+# def generate_config(config_dir):
+#     """Create a new config file at appropriate location if one is not detected"""
 
-    # storage for user generated wallsy media
-    wallsy_media = Path("~/wallsy").expanduser()
+#     # storage for user generated wallsy media
+#     wallsy_media = Path("~/wallsy").expanduser()
 
-    # save location for wallpapers when updating desktop wallpapers
-    wallpaper_location = Path("~/.local/share/backgrounds").expanduser()
+#     # save location for wallpapers when updating desktop wallpapers
+#     wallpaper_location = Path("~/.local/share/backgrounds").expanduser()
 
-    with open(config_dir / "config.json", "w") as config:
+#     with open(config_dir / "config.json", "w") as config:
 
-        config_data = {
-            "paths": {
-                "WALLSY_CONFIG_DIR": str(config_dir),
-                "WALLSY_MEDIA_DIR": str(wallsy_media),
-                "WALLSY_WALLPAPER_DIR": str(wallpaper_location),
-                "WALLSY_EFFECTS_DIR": str(wallsy_media / "effects"),
-            }
-        }
+#         config_data = {
+#             "paths": {
+#                 "WALLSY_CONFIG_DIR": str(config_dir),
+#                 "WALLSY_MEDIA_DIR": str(wallsy_media),
+#                 "WALLSY_WALLPAPER_DIR": str(wallpaper_location),
+#                 "WALLSY_EFFECTS_DIR": str(wallsy_media / "effects"),
+#             }
+#         }
 
-        config_json = json.dump(config_data, config)
+#         config_json = json.dump(config_data, config)
 
 
 @cli.command()

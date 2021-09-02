@@ -9,6 +9,7 @@ This module controls command line "routes" for interacting with the application.
 """
 
 import os
+from collections import namedtuple
 from random import sample
 from pathlib import Path
 from shutil import copy2, SameFileError
@@ -21,7 +22,10 @@ from . import image_handler
 from . import wallpaper_handler
 from . import unsplash_handler
 
-from .utils import init
+from .config import WallsyConfig
+from .config import init
+
+from .utils import WallsyData
 from .utils import get_stdin
 from .utils import load
 from .utils import WallsyLoadError
@@ -127,7 +131,11 @@ def cli(
     https://docs.python.org/3/library/os.html#os.stat_result
     """
 
-    settings = init()
+    # Initialize the wallsy app by loading variables from a config file. Used to customize
+    # things like default directories for saving and retrieving files, effects styles etc.
+
+    config: WallsyConfig = init()
+    ctx.obj = WallsyData(config=config)
 
     # Check if wallsy is being used as part of a command pipeline, by checking if
     # there is a value for standard input.
@@ -153,9 +161,16 @@ def cli(
             dest_path = load(file, url)
         except WallsyLoadError as error:
             print(f"There was an error trying to load the file: {error}")
-        # make dest_path available to the result callback via the Click Context object.
-        # it does not appear that the return value of this group function is available in return_callback
-        ctx.obj = dest_path
+
+        """
+        make dest_path available to the result callback via the Click Context object.
+        it does not appear that the return value of this group function is available in return_callback.
+        While click options are passed automatically into result_callback, standard input is collected
+        within the command itself and so will not appear as an argument to that function. The only way 
+        to ensure our input file path arrives is through the context object. 
+        """
+
+        ctx.obj.file = dest_path
 
     return dest_path
 
@@ -190,6 +205,7 @@ def add(file_from_pipeline, file=None, url=None):
 
 
 @cli.command(name="random")
+@click.pass_obj
 @click.option(
     "--keyword",
     "-q",
@@ -211,7 +227,7 @@ def add(file_from_pipeline, file=None, url=None):
     help="Grab an image from Unsplash or locally from your wallsy folder.",
 )
 @make_callback
-def random(file_from_pipeline, keyword, dimensions, local):
+def random(obj, file_from_pipeline, keyword, dimensions, local):
     """
     Generate a random image from source (default: Unsplash).
 
@@ -231,9 +247,9 @@ def random(file_from_pipeline, keyword, dimensions, local):
     file = None
 
     if local:
-        img_set = list(Path(os.getenv("WALLSY_MEDIA_DIR")).iterdir())
+        img_set = list(obj.config.WALLSY_MEDIA_DIR).iterdir()
         file = sample(img_set, 1)[0].resolve()
-        print(f"Grabbed {file.name} from {os.getenv('WALLSY_MEDIA_DIR')}")
+        print(f"Grabbed {file.name} from {obj.config.WALLSY_MEDIA_DIR}")
 
     else:
         file = load(
@@ -247,6 +263,7 @@ def random(file_from_pipeline, keyword, dimensions, local):
 
 
 @cli.command(name="blur")
+@click.pass_obj
 @click.option(
     "--radius",
     default=5,
@@ -255,7 +272,7 @@ def random(file_from_pipeline, keyword, dimensions, local):
 )  # note that click options are passed to the decorated command as keyword arguments. so should be specified after positional in the signature
 @make_callback
 @require_file
-def blur(file: Path, radius):
+def blur(obj, file: Path, radius):
     """
     Apply a Gaussian blur effect to image. Default pixel radius for blur is 5.
     """
@@ -265,7 +282,7 @@ def blur(file: Path, radius):
         file = image_handler.blur(
             file,
             radius=int(radius),
-            dest_path=Path(os.getenv("WALLSY_EFFECTS_DIR")) / file.name,
+            dest_path=Path(obj.config.WALLSY_MEDIA_DIR) / file.name,
         )
         print(f"Saved new image as {file.name} in directory {file.parent}")
 
@@ -307,16 +324,18 @@ def posterize(file: Path, colors: int):
 
 
 @cli.command(name="desktop")
+@click.pass_obj
 @make_callback
-def update_desktop_wallpaper(file):
+def update_desktop_wallpaper(obj, file):
     """
     Update the desktop background with the specified image.
     """
 
     if file:
-        wallpaper_dir = Path(os.getenv("WALLSY_WALLPAPER_DIR"))
+        wallpaper_dir = obj.config.WALLSY_WALLPAPER_DIR
 
         try:
+            print("file: ", file)
             # note: copy2 attempts to preserve file metadata. other copy functions in shutil do not do so
             copy2(file, wallpaper_dir / file.name)
             print(f"Added a copy of {file.name} to {wallpaper_dir}")
@@ -383,11 +402,13 @@ def process_pipeline(ctx, callbacks, *args, **kwargs):
     are generally those used to source an image for processing, e.g. "load" or "random"
     """
 
-    file = ctx.obj
+    file = ctx.obj.file
 
     for callback in callbacks:
-        print(callback.__name__)
+        print(callback.__name__, end=" ")
+        print(file if file else "")
         file = callback(file)
+        print(file if file else "")
 
 
 if __name__ == "__main__":
