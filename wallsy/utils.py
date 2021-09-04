@@ -22,6 +22,9 @@ from .config import WallsyConfig
 from .config import WallsyConfigError
 from .config import load_config
 
+from .console import console
+from .console import error_console
+
 
 class WallsyLoadError(Exception):
     """Raise when loading a resource from file or URL fails."""
@@ -222,3 +225,23 @@ def require_file(func):
         return func(*args, **kwargs)
 
     return wrapper
+
+
+def printer_factory(
+    enter="f[bold]{func.__name__}", success="all done", fail=f":x: failed."
+):
+    def printer(func):
+        @wraps(func)
+        def wrapper(*args, **kwargs):
+            # console=console
+            try:
+                console.print(enter, end=" ")
+                output = func(*args, **kwargs)
+                console.print(success)
+                return output
+            except Exception as error:
+                error_console.print(f"[bold]{func.__name__} {fail} [/]{error}")
+
+        return wrapper
+
+    return printer

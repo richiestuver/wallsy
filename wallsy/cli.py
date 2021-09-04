@@ -13,14 +13,20 @@ from typing import Optional
 from random import sample
 from pathlib import Path
 from shutil import copy2, SameFileError
+from functools import wraps, update_wrapper
+from io import StringIO
 
 import click
 from rich import print
-from rich.console import Console
+
+# from rich.console import Console
 
 from . import image_handler
 from . import wallpaper_handler
 from . import unsplash_handler
+
+from .console import console
+from .console import error_console
 
 from .config import WallsyConfig
 from .config import init
@@ -31,6 +37,7 @@ from .utils import load
 from .utils import WallsyLoadError
 from .utils import require_file
 from .utils import make_callback
+from .utils import printer_factory
 
 
 """
@@ -40,15 +47,13 @@ This module contains the Wallsy CLI app specification and command callback funct
 
 """
 
-# TODO: code cleanup - this thing is a huge mess right now
 # TODO: documentation - make sure everything has docstrings, every click.option has "help" kwarg
 #          every action has a print() explanation and error handling is transparent and documented
-# TODO: figure out how to load environment variables correctly
 # TODO: handle specifying a target file name for saves and what to do when a conflict occurs
 #           Prompt user for a new file name, don't create one?
 # TODO: implement scheduler!!!!
+# TODO: how to initialize? on app invocation or on install somehow?
 # TODO: prevent non image files from getting picked up by random --local
-# TODO: refactor config settings load to use a dataclass
 # TODO: refactor std out messaging architecture
 # TODO: rearchitecture - effects should become their own subcommands
 # TODO: add option to surpress messages for pipelining
@@ -79,9 +84,15 @@ This module contains the Wallsy CLI app specification and command callback funct
     "-u",
     help="Load an image directly via url. Must link directly to an image resouce, not an API endpoint. e.g. www.example.com/image.jpg",
 )
+@click.option("--verbose", "-v", "verbosity", flag_value="verbose", default=True)
+@click.option(
+    "--quiet",
+    "verbosity",
+    flag_value="quiet",
+)
 @click.version_option()  # reads version from setup.cfg metadata
 def cli(
-    ctx: click.Context, file: Path, url: str
+    ctx: click.Context, file: Path, url: str, verbosity
 ) -> Optional[Path]:  # named cli by convention in the click docs
     """
     The best image modifier for custom wallpapers.
@@ -137,6 +148,10 @@ def cli(
     config: WallsyConfig = init()
     ctx.obj = WallsyData(config=config)
 
+    # if verbosity is set to quiet, capture all std_out and std_err to a junk stream.
+    if verbosity == "quiet":
+        console.file = StringIO()
+
     # Check if wallsy is being used as part of a command pipeline, by checking if
     # there is a value for standard input.
 
@@ -160,7 +175,8 @@ def cli(
         try:
             dest_path = load(file, url)
         except WallsyLoadError as error:
-            print(f"There was an error trying to load the file: {error}")
+            error_console.print(f"There was an error trying to load the file: {error}")
+            raise click.ClickException(message=None)
 
         """
         make dest_path available to the result callback via the Click Context object.
@@ -186,6 +202,7 @@ def cli(
 )
 @click.option("--url", "-u")
 @make_callback
+@printer_factory(enter="Starting add...")
 def add(file_from_pipeline: Path, file: str = None, url: str = None):
     """
     Add an image to Wallsy pipeline and save to Wallsy folder.
@@ -201,7 +218,7 @@ def add(file_from_pipeline: Path, file: str = None, url: str = None):
         return load(url=url)
 
     else:
-        raise click.UsageError("Add - No file or url specified ")
+        raise click.UsageError("no file or url specified.")
 
 
 @cli.command(name="random")
@@ -227,6 +244,7 @@ def add(file_from_pipeline: Path, file: str = None, url: str = None):
     help="Grab an image from Unsplash or locally from your wallsy folder.",
 )
 @make_callback
+@printer_factory(enter="Grabbing a random image...")
 def random(obj: WallsyData, file_from_pipeline, keyword, dimensions, local):
     """
     Generate a random image from source (default: Unsplash).
@@ -240,16 +258,16 @@ def random(obj: WallsyData, file_from_pipeline, keyword, dimensions, local):
     """
 
     if file_from_pipeline:
-        print(
+        console.print(
             f"Warning: {__name__} received a file from a previous command. Ignoring that file and generating a new random image."
         )
 
     file = None
 
     if local:
-        img_set = list(obj.config.WALLSY_MEDIA_DIR).iterdir()
+        img_set = list(obj.config.WALLSY_MEDIA_DIR.iterdir())
         file = sample(img_set, 1)[0].resolve()
-        print(f"Grabbed {file.name} from {obj.config.WALLSY_MEDIA_DIR}")
+        console.print(f"Grabbed {file.name} from {obj.config.WALLSY_MEDIA_DIR}")
 
     else:
         file = load(
@@ -278,27 +296,28 @@ def blur(obj: WallsyData, file: Path, radius):
     """
 
     if radius:
-        print(f"Blurring {file.name}...")
+        console.print(f"Blurring {file.name}...")
         file = image_handler.blur(
             file,
             radius=int(radius),
             dest_path=Path(obj.config.WALLSY_MEDIA_DIR) / file.name,
         )
-        print(f"Saved new image as {file.name} in directory {file.parent}")
+        console.print(f"Saved new image as {file.name} in directory {file.parent}")
 
     return file
 
 
-@cli.command()
+@cli.command(name="noir")
 @make_callback
+@printer_factory(enter="")
 @require_file
 def noir(file):
     """Apply a noir effect to the image. Currently this only converts image to greyscale. May add
     additional enhancements (e.g. increase contrast) in the future.
     """
-    print(f"Applying noir effect to {file.name}")
+    # console.print(f"Applying noir effect to {file.name}")
     file = image_handler.greyscale(img_path=file, path_modifier="noir")
-    print(f"Saved new image as {file.name}")
+    # console.print(f"Saved new image as {file.name}")
 
     return file
 
@@ -311,21 +330,23 @@ def noir(file):
     help="Specify the number of colors to reduce the image to (range 1-255)",
 )
 @make_callback
+@printer_factory(enter="hi")
 @require_file
 def posterize(file: Path, colors: int):
     """
     Apply a posterization effect to the image.
     """
 
-    print(f"Applying poster effect to {file.name}. This may take a moment...")
+    console.print(f"Applying poster effect to {file.name}. This may take a moment...")
     file = image_handler.quantize(file, path_modifier="posterize", colors=colors)
-    print(f"Saved new image as {file.name}")
+    console.print(f"Saved new image as {file.name}")
     return file
 
 
 @cli.command(name="desktop")
-@click.pass_obj
 @make_callback
+@printer_factory(enter="Starting desktop", success="Ending desktop...")
+@click.pass_obj
 def update_desktop_wallpaper(obj: WallsyData, file):
     """
     Update the desktop background with the specified image.
@@ -337,12 +358,12 @@ def update_desktop_wallpaper(obj: WallsyData, file):
         try:
             # note: copy2 attempts to preserve file metadata. other copy functions in shutil do not do so
             copy2(file, wallpaper_dir / file.name)
-            print(f"Added a copy of {file.name} to {wallpaper_dir}")
+            console.print(f"Added a copy of {file.name} to {wallpaper_dir}")
         except SameFileError:
-            print(f"{file.name} is already located at {wallpaper_dir}")
+            console.print(f"{file.name} is already located at {wallpaper_dir}")
 
         wallpaper_handler.update_wallpaper(img_path=wallpaper_dir / file.name)
-        print(f"Desktop wallpaper updated to {wallpaper_dir / file.name}")
+        console.print(f"Desktop wallpaper updated to {wallpaper_dir / file.name}")
 
     else:  # retrieve the currently set desktop wallpaper and use that as input for the pipeline
         file = wallpaper_handler.get_current_wallpaper()
@@ -404,10 +425,8 @@ def process_pipeline(obj: WallsyData, callbacks, *args, **kwargs):
     file = obj.file
 
     for callback in callbacks:
-        print(callback.__name__, end=" ")
-        print(file if file else "")
+        console.print(callback)
         file = callback(file)
-        print(file if file else "")
 
 
 if __name__ == "__main__":
