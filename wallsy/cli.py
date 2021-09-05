@@ -19,14 +19,16 @@ from io import StringIO
 import click
 from rich import print
 
-# from rich.console import Console
-
 from . import image_handler
 from . import wallpaper_handler
 from . import unsplash_handler
 
 from .console import console
 from .console import error_console
+from .console import warn
+from .console import fail
+from .console import describe
+from .console import confirm
 
 from .config import WallsyConfig
 from .config import init
@@ -56,7 +58,6 @@ This module contains the Wallsy CLI app specification and command callback funct
 # TODO: prevent non image files from getting picked up by random --local
 # TODO: refactor std out messaging architecture
 # TODO: rearchitecture - effects should become their own subcommands
-# TODO: add option to surpress messages for pipelining
 # TODO  add --prompt option to desktop
 # TODO: moar effects - darken and lighten, and warhol effects
 # TODO: add --overwrite option to disable saving each sub image
@@ -119,7 +120,7 @@ def cli(
 
     3) Convert random "mountain" image to grayscale and save as "myphoto" to the 'documents' directory
 
-        $ wallsy random -q="mountain" effects --grayscale save --dest="~/documents" --name="myphoto"
+        $ wallsy random -q="mountain" effects --noir save --dest="~/documents" --name="myphoto"
 
     For detailed help text run the --help modifier with the specified command, e.g.
 
@@ -202,7 +203,6 @@ def cli(
 )
 @click.option("--url", "-u")
 @make_callback
-@printer_factory(enter="Starting add...")
 def add(file_from_pipeline: Path, file: str = None, url: str = None):
     """
     Add an image to Wallsy pipeline and save to Wallsy folder.
@@ -258,7 +258,7 @@ def random(obj: WallsyData, file_from_pipeline, keyword, dimensions, local):
     """
 
     if file_from_pipeline:
-        console.print(
+        error_console.print(
             f"Warning: {__name__} received a file from a previous command. Ignoring that file and generating a new random image."
         )
 
@@ -293,31 +293,33 @@ def random(obj: WallsyData, file_from_pipeline, keyword, dimensions, local):
 def blur(obj: WallsyData, file: Path, radius):
     """
     Apply a Gaussian blur effect to image. Default pixel radius for blur is 5.
+
+    Note that Click handles exceptions in cases where invalid input is provided for radius (default value and type provided).
     """
 
-    if radius:
-        console.print(f"Blurring {file.name}...")
-        file = image_handler.blur(
-            file,
-            radius=int(radius),
-            dest_path=Path(obj.config.WALLSY_MEDIA_DIR) / file.name,
-        )
-        console.print(f"Saved new image as {file.name} in directory {file.parent}")
+    console.print(f"blurring {file.name} with radius {radius}..")
+
+    file = image_handler.blur(
+        file,
+        radius=int(radius),
+        dest_path=Path(obj.config.WALLSY_MEDIA_DIR) / file.name,
+    )
+
+    console.print(f"saved new image as {file.name} in directory {file.parent}")
 
     return file
 
 
 @cli.command(name="noir")
 @make_callback
-@printer_factory(enter="")
 @require_file
 def noir(file):
     """Apply a noir effect to the image. Currently this only converts image to greyscale. May add
     additional enhancements (e.g. increase contrast) in the future.
     """
-    # console.print(f"Applying noir effect to {file.name}")
+    console.print(f"Applying noir effect to {file.name}")
     file = image_handler.greyscale(img_path=file, path_modifier="noir")
-    # console.print(f"Saved new image as {file.name}")
+    console.print(f"Saved new image as {file.name}")
 
     return file
 
@@ -330,14 +332,13 @@ def noir(file):
     help="Specify the number of colors to reduce the image to (range 1-255)",
 )
 @make_callback
-@printer_factory(enter="hi")
 @require_file
 def posterize(file: Path, colors: int):
     """
     Apply a posterization effect to the image.
     """
 
-    console.print(f"Applying poster effect to {file.name}. This may take a moment...")
+    console.print(f"Applying poster effect to {file.name}...")
     file = image_handler.quantize(file, path_modifier="posterize", colors=colors)
     console.print(f"Saved new image as {file.name}")
     return file
@@ -345,7 +346,6 @@ def posterize(file: Path, colors: int):
 
 @cli.command(name="desktop")
 @make_callback
-@printer_factory(enter="Starting desktop", success="Ending desktop...")
 @click.pass_obj
 def update_desktop_wallpaper(obj: WallsyData, file):
     """
@@ -360,7 +360,7 @@ def update_desktop_wallpaper(obj: WallsyData, file):
             copy2(file, wallpaper_dir / file.name)
             console.print(f"Added a copy of {file.name} to {wallpaper_dir}")
         except SameFileError:
-            console.print(f"{file.name} is already located at {wallpaper_dir}")
+            error_console.print(f"{file.name} is already located at {wallpaper_dir}")
 
         wallpaper_handler.update_wallpaper(img_path=wallpaper_dir / file.name)
         console.print(f"Desktop wallpaper updated to {wallpaper_dir / file.name}")
