@@ -12,7 +12,7 @@ Create beautiful images, effects, and desktop wallpapers through composable edit
     * [Specify an input image or grab a random image either online or locally](#specify-an-input-image-or-grab-a-random-image-either-online-or-locally)
     * [Apply effects to an image in a fully composable way](#apply-effects-to-an-image-in-a-fully-composable-way,-eg)
     * [Desktop wallpaper support - automatically update your desktop or use your current desktop image as input](#desktop-wallpaper-support---automatically-update-your-desktop-or-use-your-current-desktop-image-as-input,-eg)
-  * [Fine Grained Controls](#fine-grained-controls:)
+  * [Fine Grained Controls](#fine-grained-controls)
   * [Help](#help)
     * [Uninstall Wallsy](#uninstall-wallsy)
     * [Uninstalling a virtual environment](#uninstalling-a-virtual-environment)
