@@ -8,7 +8,7 @@ Create beautiful images, effects, and desktop wallpapers through composable edit
     * [Dependencies](#dependencies)
     * [Development Installation](#development-installation)
   * [Quickstart](#quickstart)
-  * [Usage](#usage)
+  * [Usage Examples](#usage-examples)
     * [Specify an input image or grab a random image either online or locally](#specify-an-input-image-or-grab-a-random-image-either-online-or-locally)
     * [Apply effects to an image in a fully composable way](#apply-effects-to-an-image-in-a-fully-composable-way,-eg)
     * [Desktop wallpaper support - automatically update your desktop or use your current desktop image as input](#desktop-wallpaper-support---automatically-update-your-desktop-or-use-your-current-desktop-image-as-input,-eg)
@@ -78,7 +78,7 @@ $ wallsy desktop posterize desktop
 ```
 
 
-## Usage
+## Usage Examples
 Wallsy is designed to chain commands together into powerful one-line expressions to collect, edit, and compose images with a
 focus on use in personal applications like wallpapers, background images for streaming/creative applications, etc.
 
