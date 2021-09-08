@@ -43,4 +43,3 @@ six==1.16.0
 toml==0.10.2
 urllib3==1.26.6
 virtualenv==20.7.2
--e git+https://github.com/richiestuver/gnomesplash.git@4ca1ddf8ee3346ebef0ff88ff300abdc01dd402b#egg=wallsy
