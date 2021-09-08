@@ -183,15 +183,23 @@ def blur(
         return out
 
 
-def greyscale(img_path: Path, path_modifier: str = "greyscale") -> Path:
+def greyscale(
+    img_path: Path,
+    path_modifier: str = "greyscale",
+    dest_path: Path = None,
+) -> Path:
     """
     Convert image to greyscale. Image is not modified in place. A new image is written out to file.
     """
 
     with Image.open(img_path) as image:
         img_greyscale = image.convert(mode="L")  # 'L' corresponds to 8-bit greyscale
+
+        if not dest_path:
+            dest_path = img_path
+
         out = Path(
-            f"{img_path.parent / img_path.stem}-{path_modifier}{img_path.suffix}"
+            f"{dest_path.parent / dest_path.stem}-{path_modifier}{dest_path.suffix}"
         )
         img_greyscale.save(out)
 

@@ -24,6 +24,10 @@ from .config import load_config
 
 from .console import console
 from .console import error_console
+from .console import describe
+from .console import warn
+from .console import fail
+from .console import confirm_success
 
 
 class WallsyLoadError(Exception):
@@ -59,11 +63,75 @@ def get_stdin() -> Path:
     if S_ISFIFO(os.stat(0).st_mode):
 
         file = Path(sys.stdin.read().strip()).expanduser().resolve()
-        print(f"Read file from standard input: {file.name}")
 
         return Path(file)
 
     raise OSError("Stdin check: no pipeline detected for standard input.")
+
+
+def load_url(url: str) -> Path:
+    """ """
+
+    config = load_config()
+    dest_path = config.WALLSY_MEDIA_DIR
+
+    # let's try to prevent as many obviously invalid requests from getting through
+    # as is realistically possible.
+
+    # if there is no path component to the url, the provided url is
+    # (almost) certainly not a direct link to an image resource.
+    # e.g. https://example.com/  -> path is ""
+    #      https://example.com/mycat.jpg  -> path is /mycat.jpg
+    if urlparse(url).path in ("", "/"):
+        raise WallsyLoadError("please specify a link directly to an image resource.")
+
+    file_name = Path(urlparse(url).path).name
+
+    try:
+        dest_path = image_handler.download_image(
+            url=url, file_path=dest_path / file_name
+        )
+    except image_handler.ImageDownloadError as error:
+        raise WallsyLoadError(str(error))
+    except image_handler.InvalidImageError as error:
+        raise WallsyLoadError(str(error))
+    except Exception as error:
+        raise WallsyLoadError(f"something unexpected happened: {error}")
+
+    # if we get this far, we should have a validated image. make the path available to other
+    # subcommands by storing in the click context's object attribute (which is designed for this purpose)
+
+    return dest_path
+
+
+def load_file(file=None) -> Path:
+    """ """
+
+    config = load_config()
+    dest_path = config.WALLSY_MEDIA_DIR
+
+    # if file is not a Path, (can also be str or TextIOBuffer), convert to Path
+    file = Path(file).expanduser().resolve()
+    dest_path = dest_path / file.name
+
+    # validate that the input file is a valid image.
+    try:
+        image_handler.validate_image(file)
+
+    except image_handler.InvalidImageError as error:
+        raise WallsyLoadError(str(error))
+
+    # copy the file contents to destination
+    try:
+        # Note that copy2 attempts to preserve metedata, other copy funcs in shutil do not
+        copy2(file, dest_path)
+    except SameFileError:
+        warn(f"'{file.name}' is already located at {dest_path.parent}")
+
+    # if we get this far, we should have a validated image. make the path available to other
+    # subcommands by storing in the click context's object attribute (which is designed for this purpose)
+
+    return dest_path
 
 
 def load(file=None, url=None) -> Path:
@@ -137,11 +205,9 @@ def load(file=None, url=None) -> Path:
         file_name = Path(urlparse(url).path).name
 
         try:
-            print(f"Grabbing an image from {url}...")
             dest_path = image_handler.download_image(
                 url=url, file_path=dest_path / file_name
             )
-            print(f"Downloaded image to {dest_path}")
         except image_handler.ImageDownloadError as error:
             raise WallsyLoadError(str(error))
         except image_handler.InvalidImageError as error:
@@ -227,21 +293,18 @@ def require_file(func):
     return wrapper
 
 
-def printer_factory(
-    enter="f[bold]{func.__name__}", success="all done", fail=f":x: failed."
-):
-    def printer(func):
-        @wraps(func)
-        def wrapper(*args, **kwargs):
-            # console=console
-            try:
-                console.print(enter, end=" ")
-                output = func(*args, **kwargs)
-                console.print(success)
-                return output
-            except Exception as error:
-                error_console.print(f"[bold]{func.__name__} {fail} [/]{error}")
+def catch_errors(func):
+    """
+    Catch and format errors with the "fail" console template and gracefully
+    exit the application with an error code.
+    """
 
-        return wrapper
+    @wraps(func)
+    def wrapper(*args, **kwargs):
+        try:
+            return func(*args, **kwargs)
+        except Exception as error:
+            fail(str(error))
+            exit(1)
 
-    return printer
+    return wrapper

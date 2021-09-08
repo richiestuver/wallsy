@@ -28,7 +28,7 @@ from .console import error_console
 from .console import warn
 from .console import fail
 from .console import describe
-from .console import confirm
+from .console import confirm_success
 
 from .config import WallsyConfig
 from .config import init
@@ -36,10 +36,12 @@ from .config import init
 from .utils import WallsyData
 from .utils import get_stdin
 from .utils import load
+from .utils import load_file
+from .utils import load_url
 from .utils import WallsyLoadError
 from .utils import require_file
 from .utils import make_callback
-from .utils import printer_factory
+from .utils import catch_errors
 
 
 """
@@ -54,6 +56,7 @@ This module contains the Wallsy CLI app specification and command callback funct
 # TODO: handle specifying a target file name for saves and what to do when a conflict occurs
 #           Prompt user for a new file name, don't create one?
 # TODO: implement scheduler!!!!
+# TODO: --dest specify target save destinations
 # TODO: how to initialize? on app invocation or on install somehow?
 # TODO: prevent non image files from getting picked up by random --local
 # TODO: refactor std out messaging architecture
@@ -61,6 +64,7 @@ This module contains the Wallsy CLI app specification and command callback funct
 # TODO  add --prompt option to desktop
 # TODO: moar effects - darken and lighten, and warhol effects
 # TODO: add --overwrite option to disable saving each sub image
+# TODO: handle overwriting files appropriately?
 # TODO: refactor occurrences of os.path to pathlib.Path across app.
 # TODO: notifications to user about save and retrieval
 # TODO: fix issue where mode after posterize is incompatible with other effects like blur (ValueError)
@@ -92,6 +96,7 @@ This module contains the Wallsy CLI app specification and command callback funct
     flag_value="quiet",
 )
 @click.version_option()  # reads version from setup.cfg metadata
+@catch_errors
 def cli(
     ctx: click.Context, file: Path, url: str, verbosity
 ) -> Optional[Path]:  # named cli by convention in the click docs
@@ -158,26 +163,31 @@ def cli(
 
     try:
         file: Path = get_stdin()
+        describe(f":arrow_right-emoji: 'wallsy' got '{file.name}' from standard input")
 
     except OSError:
-        pass
 
-    """
-    INVOCATION METHOD 2: If standard input is not part of a pipe, path should be specified by user in file or url option. 
-    There are some subcommands which act as a source for file path input for later commands, so wallsy should not fail at this 
-    stage. As a result, it is necessary for each subcommand that explicitly requires a file path to apply the 
-    @require_file decorator to make sure that necessary inputs are handled and raise relevant errors when missing.
-    """
+        """
+        INVOCATION METHOD 2: If standard input is not part of a pipe, path should be specified by user in file or url option.
+        There are some subcommands which act as a source for file path input for later commands, so wallsy should not fail at this
+        stage. As a result, it is necessary for each subcommand that explicitly requires a file path to apply the
+        @require_file decorator to make sure that necessary inputs are handled and raise relevant errors when missing.
+        """
 
-    dest_path = None
+        if file:
+            file: Path = load_file(file=file)
+            confirm_success(
+                f":floppy_disk-emoji: 'wallsy' loaded '{file.name}' from {file.parent}"
+            )
 
-    if file is not None or url is not None:
-
-        try:
-            dest_path = load(file, url)
-        except WallsyLoadError as error:
-            error_console.print(f"There was an error trying to load the file: {error}")
-            raise click.ClickException(message=None)
+        if url:
+            describe(
+                f":earth_asia-emoji: 'wallsy' getting image from {url} ...", end=" "
+            )
+            file: Path = load_url(url=url)
+            confirm_success(
+                f":white_check_mark-emoji: \n:floppy_disk: 'wallsy' loaded '{file.name}' from {file.parent}"
+            )
 
         """
         make dest_path available to the result callback via the Click Context object.
@@ -187,9 +197,8 @@ def cli(
         to ensure our input file path arrives is through the context object. 
         """
 
-        ctx.obj.file = dest_path
-
-    return dest_path
+    ctx.obj.file = file
+    return file
 
 
 @cli.command()
@@ -203,22 +212,33 @@ def cli(
 )
 @click.option("--url", "-u")
 @make_callback
-def add(file_from_pipeline: Path, file: str = None, url: str = None):
+@catch_errors
+def add(file_from_pipeline: Path = None, file: Path = None, url: str = None):
     """
-    Add an image to Wallsy pipeline and save to Wallsy folder.
+    Add a copy of image to the Wallsy folder - useful for things like random --local and image management. Use as part of a pipeline
+    or specify a file / url manually.
     """
 
     if file_from_pipeline:
-        return load(file=file_from_pipeline)
+        file: Path = load_file(file=file_from_pipeline)
 
     elif file:
-        return load(file=file)
+        file: Path = load_file(file=file)
 
     elif url:
-        return load(url=url)
+        describe(f":earth_asia-emoji: 'add' getting image from {url} ...", end=" ")
+        file: Path = load_url(url=url)
+        confirm_success(":white_check_mark-emoji:")
 
     else:
-        raise click.UsageError("no file or url specified.")
+        raise click.UsageError(
+            "'add' recieved nothing from pipeline and no file or url specified."
+        )
+
+    confirm_success(
+        f":floppy_disk-emoji: 'add' loaded '{file.name}' from {file.parent}"
+    )
+    return file
 
 
 @cli.command(name="random")
@@ -244,11 +264,13 @@ def add(file_from_pipeline: Path, file: str = None, url: str = None):
     help="Grab an image from Unsplash or locally from your wallsy folder.",
 )
 @make_callback
-@printer_factory(enter="Grabbing a random image...")
+@catch_errors
 def random(obj: WallsyData, file_from_pipeline, keyword, dimensions, local):
     """
     Generate a random image from source (default: Unsplash).
+    """
 
+    """
     Note: file_from_pipeline is the only argument passed to the callback function in the process_pipeline stage. This argument is
     used by nearly all commands to operate on the currently active image. The random command, however, is intended to generate
     new filenames for use by subsequent commands on the pipeline. If random is specified somewhere in the middle of a chain
@@ -258,23 +280,29 @@ def random(obj: WallsyData, file_from_pipeline, keyword, dimensions, local):
     """
 
     if file_from_pipeline:
-        error_console.print(
-            f"Warning: {__name__} received a file from a previous command. Ignoring that file and generating a new random image."
+        warn(
+            f"'random' received a file from a previous command. Ignoring that file and generating a new random image..."
         )
 
     file = None
 
     if local:
+
         img_set = list(obj.config.WALLSY_MEDIA_DIR.iterdir())
         file = sample(img_set, 1)[0].resolve()
-        console.print(f"Grabbed {file.name} from {obj.config.WALLSY_MEDIA_DIR}")
+        confirm_success(
+            f":game_die-emoji: 'random' grabbed '{file.name}' from {obj.config.WALLSY_MEDIA_DIR}"
+        )
 
     else:
-        file = load(
-            url=unsplash_handler.random_featured_photo(
-                keywords=keyword if keyword else None,
-                dimensions=dimensions if dimensions else None,
-            )
+        url = unsplash_handler.random_featured_photo(
+            keywords=keyword if keyword else None,
+            dimensions=dimensions if dimensions else None,
+        )
+        describe(f":earth_asia-emoji: 'random' getting image from {url} ...", end=" ")
+        file = load(url=url)
+        confirm_success(
+            f":white_check_mark-emoji: \n:floppy_disk: 'random' saved '{file.name}' to {file.parent}"
         )
 
     return file
@@ -289,6 +317,7 @@ def random(obj: WallsyData, file_from_pipeline, keyword, dimensions, local):
     help="Specify the pixel radius for blur effect.",
 )  # note that click options are passed to the decorated command as keyword arguments. so should be specified after positional in the signature
 @make_callback
+@catch_errors
 @require_file
 def blur(obj: WallsyData, file: Path, radius):
     """
@@ -297,29 +326,43 @@ def blur(obj: WallsyData, file: Path, radius):
     Note that Click handles exceptions in cases where invalid input is provided for radius (default value and type provided).
     """
 
-    console.print(f"blurring {file.name} with radius {radius}..")
+    describe(
+        f":blue_circle-emoji: 'blur' applying blur to '{file.name}' with radius {radius}.."
+    )
 
     file = image_handler.blur(
         file,
         radius=int(radius),
-        dest_path=Path(obj.config.WALLSY_MEDIA_DIR) / file.name,
+        dest_path=Path(obj.config.WALLSY_EFFECTS_DIR) / file.name,
     )
 
-    console.print(f"saved new image as {file.name} in directory {file.parent}")
+    confirm_success(
+        f":floppy_disk-emoji: 'blur' saved image as '{file.name}' in {file.parent}"
+    )
 
     return file
 
 
 @cli.command(name="noir")
+@click.pass_obj
 @make_callback
+@catch_errors
 @require_file
-def noir(file):
+def noir(obj, file):
     """Apply a noir effect to the image. Currently this only converts image to greyscale. May add
     additional enhancements (e.g. increase contrast) in the future.
     """
-    console.print(f"Applying noir effect to {file.name}")
-    file = image_handler.greyscale(img_path=file, path_modifier="noir")
-    console.print(f"Saved new image as {file.name}")
+    describe(f":detective-emoji:  'noir' applying noir effect to '{file.name}'")
+
+    file = image_handler.greyscale(
+        img_path=file,
+        path_modifier="noir",
+        dest_path=Path(obj.config.WALLSY_EFFECTS_DIR) / file.name,
+    )
+
+    confirm_success(
+        f":floppy_disk: 'noir' saved image as '{file.name}' in {file.parent}"
+    )
 
     return file
 
@@ -332,22 +375,26 @@ def noir(file):
     help="Specify the number of colors to reduce the image to (range 1-255)",
 )
 @make_callback
+@catch_errors
 @require_file
 def posterize(file: Path, colors: int):
     """
     Apply a posterization effect to the image.
     """
 
-    console.print(f"Applying poster effect to {file.name}...")
+    describe(f":sparkler-emoji: 'poster' applying poster effect to '{file.name}'...")
     file = image_handler.quantize(file, path_modifier="posterize", colors=colors)
-    console.print(f"Saved new image as {file.name}")
+    confirm_success(
+        f":floppy_disk-emoji: 'poster' saved image as '{file.name}' in {file.parent}"
+    )
     return file
 
 
 @cli.command(name="desktop")
-@make_callback
 @click.pass_obj
-def update_desktop_wallpaper(obj: WallsyData, file):
+@make_callback
+@catch_errors
+def desktop(obj: WallsyData, file: Path):
     """
     Update the desktop background with the specified image.
     """
@@ -355,25 +402,38 @@ def update_desktop_wallpaper(obj: WallsyData, file):
     if file:
         wallpaper_dir = obj.config.WALLSY_WALLPAPER_DIR
 
-        try:
+        if not Path(wallpaper_dir / file.name).exists():
+
             # note: copy2 attempts to preserve file metadata. other copy functions in shutil do not do so
             copy2(file, wallpaper_dir / file.name)
-            console.print(f"Added a copy of {file.name} to {wallpaper_dir}")
-        except SameFileError:
-            error_console.print(f"{file.name} is already located at {wallpaper_dir}")
+            describe(
+                f":desktop_computer-emoji:  'desktop' added a copy of '{file.name}' to {wallpaper_dir}"
+            )
 
-        wallpaper_handler.update_wallpaper(img_path=wallpaper_dir / file.name)
-        console.print(f"Desktop wallpaper updated to {wallpaper_dir / file.name}")
+            wallpaper_handler.update_wallpaper(img_path=wallpaper_dir / file.name)
+            confirm_success(
+                f":white_check_mark-emoji: 'desktop' updated wallpaper to {wallpaper_dir / file.name}"
+            )
+
+        else:
+            warn(f"'{file.name}' is already located at {wallpaper_dir}")
 
     else:  # retrieve the currently set desktop wallpaper and use that as input for the pipeline
         file = wallpaper_handler.get_current_wallpaper()
-        file = load(file=file)
+        describe(
+            f":desktop_computer-emoji:  'desktop' retrieved current background '{file}'"
+        )
+        file = load_file(file=file)
+        confirm_success(
+            f":floppy_disk-emoji: 'poster' saved image as '{file.name}' in {file.parent}"
+        )
 
     return file
 
 
 @cli.command()
 @make_callback
+@catch_errors
 @require_file
 def show(file: Path):
     """Show the current image using the default application for the OS."""
@@ -384,6 +444,7 @@ def show(file: Path):
 
 @cli.result_callback()
 @click.pass_obj
+@catch_errors
 def process_pipeline(obj: WallsyData, callbacks, *args, **kwargs):
     """
     The result_callback decorator supplies this function with an argument containing all of the return values from
@@ -425,7 +486,6 @@ def process_pipeline(obj: WallsyData, callbacks, *args, **kwargs):
     file = obj.file
 
     for callback in callbacks:
-        console.print(callback)
         file = callback(file)
 
 
