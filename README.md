@@ -1,63 +1,167 @@
 # wallsy
 
-The best image modifier for custom desktop wallpapers and other creative uses.
+Create beautiful images, effects, and desktop wallpapers through composable edits on the command line.
 
-*** Software Under Construction! Stay tuned for updates.***
-## TODO
-- [ ] Write filter effects handler
-- [ ] Write file handler
-- [ ] Write search query handler
-- [ ] Write scheduler
-- [ ] Write pipeline processing logic for CLI
-- [ ] Error handling on CLI 
-- [ ] Unit tests for the above
+## Requirements
 
+- Python 3.9+
+- Gnome Shell 3.38*
 
-## Usage:
+*required in order to use desktop wallpaper command
 
-Wallsy is designed to chain commands together into powerful one-line expressions to collect, edit, and use images.
+### Supported Platforms and Environments
+- OS: Ubuntu 21.04
+- DE: Gnome 3.38
+- Shell: Bash, Zsh
 
-1) (Required) specify an input image using either 'new' or 'random' commands, e.g. 
+MacOS and Windows are not supported at this time. Use at your own risk.
 
+## Installation
+
+The latest version of wallsy can be downloaded from Github using pip:
 ```
-wallsy new --file="photo.jpg" [ADDITIONAL COMMANDS]
-```
-
-2) (Optional) apply desired image manipulations using 'effects' command, e.g. 
-
-```
-wallsy [new | random] effects --blur=20 [ADDITIONAL COMMANDS]
+pip install git+https://github.com/richiestuver/wallsy.git#egg=wallsy
 ```
 
-3) (Optional) save image or set the resulting image as a new desktop background using 'save' or 'desktop' commands, e.g. 
+An official PyPI package may be made available in the future. 
+
+### Dependencies
+
+wallsy requires the following Python packages:
+- Click
+- Pillow
+- Rich
+- PyGObject 
+- Requests
+
+### Development Installation
+See [requirements.txt](https://github.com/richiestuver/wallsy/blob/master/requirements.txt) for dependencies. Recommended to create a virtual environment first: 
 
 ```
-wallsy [new | random] save --name="myphoto" [ADDITIONAL COMMANDS]
+python -m venv .venv
+source .venv/bin/activate
+``` 
+
+```bash
+$ git clone https://github.com/richiestuver/wallsy.git
+$ cd wallsy
+$ pip install -r requirements.txt
+$ pip install .
 ```
 
-## Examples:
+## 
+## Quickstart
 
-- Update desktop background with a random wallpaper
+**Change your desktop wallpaper with a random featured photo from Unsplash**
+```
+$ wallsy random desktop
+```
 
-    ```
-    $ wallsy random background
-    ```
+**Add an effect (e.g. posterize or noir) to your current desktop wallpaper**
+```
+$ wallsy desktop posterize desktop
+```
 
-- Add a blur to an image and set it as the desktop background
 
-    ```
-    $ wallsy new --file="my-wallpaper.jpg" effects --blur=20 background
-    ```
+## Usage
+Wallsy is designed to chain commands together into powerful one-line expressions to collect, edit, and compose images with a
+focus on use in personal applications like wallpapers, background images for streaming/creative applications, etc.
 
-- Convert random "mountain" image to grayscale and save as "myphoto" to the 'documents' directory
+- To see all available commands, run `wallsy --help`
 
-    ```
-    $ wallsy random -q="mountain" effects --grayscale save --dest="~/documents" --name="myphoto"
-    ```
+- For help on specific commands, run `wallsy [command] --help`
 
+---
+### Specify an input image or grab a random image either online or locally
+
+**Get a random image from Unsplash Source and show it using default image viewer**
+
+```
+$ wallsy random show
+```
+
+**Get a random image from your ~/wallsy folder**
+```
+$ wallsy random --local show
+```
+
+**Add a new image to your ~/wallsy folder**
+```
+$ wallsy --file myphoto.jpeg show
+```
+
+**Grab an image from a url**
+```
+$ wallsy --url https://example.com/myphoto.jpg show
+```
+---
+### Apply effects to an image in a fully composable way, e.g.
+
+
+**Create a poster effect of a photo of your dog**
+```
+$ wallsy --file mydog.jpeg posterize show
+```
+
+**Blur a random "nature" image from Unsplash Source**
+```
+$ wallsy random --keyword "nature" blur show
+```
+
+**Add blur and noir effects to a random 4k image of Tokyo, Japan**
+```
+$ wallsy random --keyword "tokyo" --size 3840 2160 blur noir show
+```
+---
+### Desktop wallpaper support - automatically update your desktop or use your current desktop image as input, e.g.
+
+**Generate a custom image and update your desktop wallpaper**
+```
+$ wallsy random --keyword="new york city" --keyword="skyline" noir desktop
+```
+
+**Use your current wallpaper as input for some cool effects then save it back to your wallpaper**
+```
+$ wallsy desktop blur noir posterize desktop
+```
+
+## Fine Grained Controls:
+Wallsy tries to provide sensible defaults for simple usage but expose enough controls
+to allow you to tweak edits to get the results you want. Most effect commands allow
+you to vary the level of the effect, e.g.
+
+---
+**Apply a 20px blur to a photo and add a posterization effect reducing to 16 colors**
+```
+wallsy --file myfile.jpg blur --radius=20px posterize colors=16 show
+```
+---
 ## Help
-For detailed help text run the --help modifier with the specified command, e.g.
+
+
+To see what's available and for detailed help text add `--help` to the specified command, e.g.
+```bash
+$ wallsy random --help
+$ wallsy posterize --help
+```
+
+### Uninstall Wallsy
+
+Uninstall wallsy with pip:
 
 ```
-$ wallsy background --help
+pip uninstall wallsy
 ```
+
+This will not uninstall wallsy's dependencies. If you need to do so, see [dependencies](#dependencies) and run `pip uninstall` for each you want to remove. 
+
+### Uninstalling a virtual environment
+
+If you used a virtual environment to install wallsy, you can simply delete the virtual environment directory to remove wallsy. 
+
+If your virtual environment is in the folder myvirtualenv:
+```bash
+$ rm -r myvirtualenv
+```
+
+**Have fun with Wallsy!**
