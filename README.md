@@ -2,6 +2,21 @@
 
 Create beautiful images, effects, and desktop wallpapers through composable edits on the command line.
 
+  * [Requirements](#requirements)
+    * [Supported Platforms and Environments](#supported-platforms-and-environments)
+  * [Installation](#installation)
+    * [Dependencies](#dependencies)
+    * [Development Installation](#development-installation)
+  * [Quickstart](#quickstart)
+  * [Usage](#usage)
+    * [Specify an input image or grab a random image either online or locally](#specify-an-input-image-or-grab-a-random-image-either-online-or-locally)
+    * [Apply effects to an image in a fully composable way](#apply-effects-to-an-image-in-a-fully-composable-way,-eg)
+    * [Desktop wallpaper support - automatically update your desktop or use your current desktop image as input](#desktop-wallpaper-support---automatically-update-your-desktop-or-use-your-current-desktop-image-as-input,-eg)
+  * [Fine Grained Controls](#fine-grained-controls:)
+  * [Help](#help)
+    * [Uninstall Wallsy](#uninstall-wallsy)
+    * [Uninstalling a virtual environment](#uninstalling-a-virtual-environment)
+
 ## Requirements
 
 - Python 3.9+
@@ -125,10 +140,10 @@ $ wallsy random --keyword="new york city" --keyword="skyline" noir desktop
 $ wallsy desktop blur noir posterize desktop
 ```
 
-## Fine Grained Controls:
+## Fine Grained Controls
 Wallsy tries to provide sensible defaults for simple usage but expose enough controls
 to allow you to tweak edits to get the results you want. Most effect commands allow
-you to vary the level of the effect, e.g.
+you to vary the level of the effect.
 
 ---
 **Apply a 20px blur to a photo and add a posterization effect reducing to 16 colors**
