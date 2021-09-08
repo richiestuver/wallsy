@@ -8,12 +8,10 @@ to auto update on a recurring interval.
 This module controls command line "routes" for interacting with the application.
 """
 
-import os
 from typing import Optional
 from random import sample
 from pathlib import Path
-from shutil import copy2, SameFileError
-from functools import wraps, update_wrapper
+from shutil import copy2
 from io import StringIO
 
 import click
@@ -24,9 +22,7 @@ from . import wallpaper_handler
 from . import unsplash_handler
 
 from .console import console
-from .console import error_console
 from .console import warn
-from .console import fail
 from .console import describe
 from .console import confirm_success
 
@@ -38,7 +34,6 @@ from .utils import get_stdin
 from .utils import load
 from .utils import load_file
 from .utils import load_url
-from .utils import WallsyLoadError
 from .utils import require_file
 from .utils import make_callback
 from .utils import catch_errors
@@ -75,6 +70,7 @@ This module contains the Wallsy CLI app specification and command callback funct
 @click.group(
     chain=True
 )  # default behavior is to pass --help automatically if no subcommand provided
+@catch_errors
 @click.pass_context
 @click.option(
     "--file",
@@ -96,7 +92,6 @@ This module contains the Wallsy CLI app specification and command callback funct
     flag_value="quiet",
 )
 @click.version_option()  # reads version from setup.cfg metadata
-@catch_errors
 def cli(
     ctx: click.Context, file: Path, url: str, verbosity
 ) -> Optional[Path]:  # named cli by convention in the click docs
