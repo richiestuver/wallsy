@@ -46,15 +46,12 @@ This module contains the Wallsy CLI app specification and command callback funct
 
 """
 
-# TODO: documentation - make sure everything has docstrings, every click.option has "help" kwarg
-#          every action has a print() explanation and error handling is transparent and documented
 # TODO: handle specifying a target file name for saves and what to do when a conflict occurs
 #           Prompt user for a new file name, don't create one?
 # TODO: implement scheduler!!!!
 # TODO: --dest specify target save destinations
 # TODO: how to initialize? on app invocation or on install somehow?
 # TODO: prevent non image files from getting picked up by random --local
-# TODO: refactor std out messaging architecture
 # TODO: rearchitecture - effects should become their own subcommands
 # TODO  add --prompt option to desktop
 # TODO: moar effects - darken and lighten, and warhol effects
@@ -78,53 +75,128 @@ This module contains the Wallsy CLI app specification and command callback funct
     type=click.Path(
         path_type=Path
     ),  # make sure that file paths are always Path objects.
-    help="Load an image from file path. Ensures image is valid and stores a copy of the image in the Wallsy folder.",
+    help="Load an image from file path. Ensures image is valid and stores a copy of the image in the Wallsy folder",
 )
 @click.option(
     "--url",
     "-u",
-    help="Load an image directly via url. Must link directly to an image resouce, not an API endpoint. e.g. www.example.com/image.jpg",
+    help="Load an image directly via url. Must link directly to an image resource, e.g. www.example.com/image.jpg",
 )
-@click.option("--verbose", "-v", "verbosity", flag_value="verbose", default=True)
+@click.option(
+    "--verbose",
+    "verbosity",
+    flag_value="verbose",
+    default=True,
+    help="Print all output to stdout or the terminal",
+)
 @click.option(
     "--quiet",
     "verbosity",
     flag_value="quiet",
+    help="Silence all output printed to the stdout or the terminal.",
 )
 @click.version_option()  # reads version from setup.cfg metadata
 def cli(
     ctx: click.Context, file: Path, url: str, verbosity
 ) -> Optional[Path]:  # named cli by convention in the click docs
     """
-    The best image modifier for custom wallpapers.
+    Wallsy
 
+    create beautiful images, effects, and desktop wallpapers through composable edits on the command line.
+
+
+    ====================
+    Quickstart
+    ====================
+
+    Change your desktop wallpaper with a random featured photo from Unsplash:
+
+        $ wallsy random desktop
+
+    Add an effect (e.g. posterize or noir) to your current desktop wallpaper
+
+        $ wallsy desktop posterize desktop
+
+
+    ====================
     Usage:
+    ====================
 
-    Wallsy is designed to chain commands together into powerful one-line expressions to collect, edit, and use images.
+    Wallsy is designed to chain commands together into powerful one-line expressions to collect, edit, and compose images with a
+    focus on use in personal applications like wallpapers, background images for streaming/creative applications, etc.
 
-    1) (Required) specify an input image using either 'new' or 'random' commands (e.g. $ wallsy new --file="photo.jpg" ...)
+    - Specify an input image or grab a random image either online or locally, e.g.
 
-    2) (Optional) apply desired image manipulations using 'effects' command (e.g. $ wallsy ... effects --blur=20 ...)
+        get a random image from Unsplash Source and display it:
 
-    3) (Optional) save image or set the resulting image as a new desktop background using 'save' or 'desktop' commands
-    (e.g. $ wallsy ... save --name="myphoto" ...)
+            $ wallsy random show
 
-    Examples:
+        get a random image from your ~/wallsy folder:
 
-    1) Update desktop background with a random wallpaper
+            $ wallsy random --local show
 
-        $ wallsy random background
+        add a new image to your ~/wallsy folder:
 
-    2) Add a blur to an image and set it as the desktop background
-        $ wallsy --file="my-wallpaper.jpg" effects --blur=20 background
+            $ wallsy --file myphoto.jpeg show
 
-    3) Convert random "mountain" image to grayscale and save as "myphoto" to the 'documents' directory
+        grab an image from a url:
 
-        $ wallsy random -q="mountain" effects --noir save --dest="~/documents" --name="myphoto"
+            $ wallsy --url https://example.com/myphoto.jpg show
 
-    For detailed help text run the --help modifier with the specified command, e.g.
 
-    $ wallsy background --help
+    - Apply effects to an image in a fully composable way, e.g.
+
+
+        create a poster effect of a photo of your dog:
+
+            $ wallsy --file "mydog.jpeg" posterize show
+
+        blur a random "nature" image from Unsplash Source:
+
+            $ wallsy random --keyword "nature" blur show
+
+        add blur and noir effects to a random 4k image of Tokyo:
+
+            $ wallsy random --keyword "tokyo" --size 3840 2160 blur noir show
+
+
+    - Desktop wallpaper support - automatically update your desktop or use your current
+    desktop image as input, e.g.
+
+        generate a custom image and update your desktop wallpaper:
+
+            $ wallsy random --keyword="new york city" --keyword="skyline" noir desktop
+
+        use your current wallpaper as input for some cool effects then save it back to your wallpaper
+
+            $ wallsy desktop blur noir posterize desktop
+
+
+    ====================
+    Fine Grained Controls:
+    ====================
+
+    Wallsy tries to provide sensible defaults for simple usage but expose enough controls
+    to allow you to tweak edits to get the results you want. Most effect commands allow
+    you to vary the level of the effect, e.g.
+
+        apply a 20px blur to a photo and add a posterization effect reducing to 16 colors:
+
+            wallsy --file myfile.jpg blur --radius=20px posterize colors=16 show
+
+
+    ====================
+    Help
+    ====================
+
+    To see what's available and for detailed help text add --help to the specified command, e.g.
+
+        $ wallsy random --help
+
+        $ wallsy posterize --help
+
+
+    Have fun with Wallsy!
     """
 
     """
@@ -210,7 +282,7 @@ def cli(
 @catch_errors
 def add(file_from_pipeline: Path = None, file: Path = None, url: str = None):
     """
-    Add a copy of image to the Wallsy folder - useful for things like random --local and image management. Use as part of a pipeline
+    Add a copy of image to the Wallsy folder. Useful for things like random --local and image management. Use as part of a pipeline
     or specify a file / url manually.
     """
 
@@ -431,7 +503,7 @@ def desktop(obj: WallsyData, file: Path):
 @catch_errors
 @require_file
 def show(file: Path):
-    """Show the current image using the default application for the OS."""
+    """Show the current image using default image viewer."""
 
     click.launch(str(file))
     return file
