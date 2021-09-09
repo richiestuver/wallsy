@@ -15,7 +15,6 @@ from shutil import copy2
 from io import StringIO
 
 import click
-from rich import print
 
 from . import image_handler
 from . import wallpaper_handler
