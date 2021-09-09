@@ -234,6 +234,20 @@ DECORATORS
 """
 
 
+def make_generator(func):
+    """
+    Take a function that accepts and returns a single input parameter and convert it into
+    a function that accepts an input stream and yields the return value of the original function.
+    """
+
+    @wraps(func)
+    def wrapper(input_stream, *args, **kwargs):
+        for input in input_stream:
+            yield func(input, *args, **kwargs)
+
+    return wrapper
+
+
 def make_callback(func):
     """
     Receive a function (presumably, that does not itself return a function) and convert it into a new function that returns the
