@@ -13,6 +13,8 @@ from random import sample
 from pathlib import Path
 from shutil import copy2
 from io import StringIO
+from itertools import chain
+from collections.abc import Iterable
 
 import click
 
@@ -29,13 +31,15 @@ from .config import WallsyConfig
 from .config import init
 
 from .utils import WallsyData
-from .utils import get_stdin
+from .utils import yield_stdin
 from .utils import load
 from .utils import load_file
 from .utils import load_url
 from .utils import require_file
 from .utils import make_callback
+from .utils import make_generator
 from .utils import catch_errors
+from .utils import extend_stream
 
 
 """
@@ -60,7 +64,6 @@ This module contains the Wallsy CLI app specification and command callback funct
 # TODO: notifications to user about save and retrieval
 # TODO: fix issue where mode after posterize is incompatible with other effects like blur (ValueError)
 # TODO: unit testing
-# FUTURE: Support streams of input and not single images.
 
 
 @click.group(
@@ -71,6 +74,8 @@ This module contains the Wallsy CLI app specification and command callback funct
 @click.option(
     "--file",
     "-f",
+    "files",
+    multiple=True,  # if opt not provided the arg defaults to ()
     type=click.Path(
         path_type=Path
     ),  # make sure that file paths are always Path objects.
@@ -79,6 +84,9 @@ This module contains the Wallsy CLI app specification and command callback funct
 @click.option(
     "--url",
     "-u",
+    "urls",
+    multiple=True,  # argument is now a tuple of str or an empty tuple
+    type=str,
     help="Load an image directly via url. Must link directly to an image resource, e.g. www.example.com/image.jpg",
 )
 @click.option(
@@ -96,8 +104,8 @@ This module contains the Wallsy CLI app specification and command callback funct
 )
 @click.version_option()  # reads version from setup.cfg metadata
 def cli(
-    ctx: click.Context, file: Path, url: str, verbosity
-) -> Optional[Path]:  # named cli by convention in the click docs
+    ctx: click.Context, files, urls, verbosity
+):  # named cli by convention in the click docs
     """
     Wallsy
 
@@ -224,47 +232,15 @@ def cli(
     if verbosity == "quiet":
         console.file = StringIO()
 
-    # Check if wallsy is being used as part of a command pipeline, by checking if
-    # there is a value for standard input.
+    streams = [
+        (load_file(file) for file in yield_stdin() if file),
+        (load_file(file) for file in files),
+        (load_url(url) for url in urls),
+    ]
 
-    try:
-        file: Path = get_stdin()
-        describe(f":arrow_right-emoji: 'wallsy' got '{file.name}' from standard input")
-
-    except OSError:
-
-        """
-        INVOCATION METHOD 2: If standard input is not part of a pipe, path should be specified by user in file or url option.
-        There are some subcommands which act as a source for file path input for later commands, so wallsy should not fail at this
-        stage. As a result, it is necessary for each subcommand that explicitly requires a file path to apply the
-        @require_file decorator to make sure that necessary inputs are handled and raise relevant errors when missing.
-        """
-
-        if file:
-            file: Path = load_file(file=file)
-            confirm_success(
-                f":floppy_disk-emoji: 'wallsy' loaded '{file.name}' from {file.parent}"
-            )
-
-        if url:
-            describe(
-                f":earth_asia-emoji: 'wallsy' getting image from {url} ...", end=" "
-            )
-            file: Path = load_url(url=url)
-            confirm_success(
-                f":white_check_mark-emoji: \n:floppy_disk: 'wallsy' loaded '{file.name}' from {file.parent}"
-            )
-
-        """
-        make dest_path available to the result callback via the Click Context object.
-        it does not appear that the return value of this group function is available in return_callback.
-        While click options are passed automatically into result_callback, standard input is collected
-        within the command itself and so will not appear as an argument to that function. The only way 
-        to ensure our input file path arrives is through the context object. 
-        """
-
-    ctx.obj.file = file
-    return file
+    stream = chain(*streams)
+    ctx.obj.stream = stream
+    return stream
 
 
 @cli.command()
@@ -308,7 +284,6 @@ def add(file_from_pipeline: Path = None, file: Path = None, url: str = None):
 
 
 @cli.command(name="random")
-@click.pass_obj
 @click.option(
     "--keyword",
     "-q",
@@ -330,7 +305,9 @@ def add(file_from_pipeline: Path = None, file: Path = None, url: str = None):
     help="Grab an image from Unsplash or locally from your wallsy folder.",
 )
 @make_callback
+@extend_stream
 @catch_errors
+@click.pass_obj
 def random(obj: WallsyData, file_from_pipeline, keyword, dimensions, local):
     """
     Generate a random image from source (default: Unsplash).
@@ -375,7 +352,6 @@ def random(obj: WallsyData, file_from_pipeline, keyword, dimensions, local):
 
 
 @cli.command(name="blur")
-@click.pass_obj
 @click.option(
     "--radius",
     default=5,
@@ -383,7 +359,9 @@ def random(obj: WallsyData, file_from_pipeline, keyword, dimensions, local):
     help="Specify the pixel radius for blur effect.",
 )  # note that click options are passed to the decorated command as keyword arguments. so should be specified after positional in the signature
 @make_callback
+@make_generator
 @catch_errors
+@click.pass_obj
 @require_file
 def blur(obj: WallsyData, file: Path, radius):
     """
@@ -410,9 +388,10 @@ def blur(obj: WallsyData, file: Path, radius):
 
 
 @cli.command(name="noir")
-@click.pass_obj
 @make_callback
+@make_generator
 @catch_errors
+@click.pass_obj
 @require_file
 def noir(obj, file):
     """Apply a noir effect to the image. Currently this only converts image to greyscale. May add
@@ -441,6 +420,7 @@ def noir(obj, file):
     help="Specify the number of colors to reduce the image to (range 1-255)",
 )
 @make_callback
+@make_generator
 @catch_errors
 @require_file
 def posterize(file: Path, colors: int):
@@ -499,6 +479,7 @@ def desktop(obj: WallsyData, file: Path):
 
 @cli.command()
 @make_callback
+@make_generator
 @catch_errors
 @require_file
 def show(file: Path):
@@ -549,10 +530,13 @@ def process_pipeline(obj: WallsyData, callbacks, *args, **kwargs):
     are generally those used to source an image for processing, e.g. "load" or "random"
     """
 
-    file = obj.file
+    stream: Iterable = obj.stream
 
     for callback in callbacks:
-        file = callback(file)
+        stream = callback(stream)
+
+    for _ in stream:
+        pass
 
 
 if __name__ == "__main__":

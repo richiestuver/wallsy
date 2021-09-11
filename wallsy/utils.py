@@ -6,28 +6,30 @@ from typing import Optional
 from dataclasses import dataclass
 from pathlib import Path
 from stat import S_ISFIFO
+from itertools import chain
 from pathlib import Path
 from shutil import copy2, SameFileError
 from functools import wraps
 from functools import partial
 from inspect import getcallargs
 from urllib.parse import urlparse
+from collections.abc import Iterator, Iterable
 
 import click
 from rich import print
 
 from wallsy import image_handler
 
-from .config import WallsyConfig
-from .config import WallsyConfigError
-from .config import load_config
+from wallsy.config import WallsyConfig
+from wallsy.config import WallsyConfigError
+from wallsy.config import load_config
 
-from .console import console
-from .console import error_console
-from .console import describe
-from .console import warn
-from .console import fail
-from .console import confirm_success
+from wallsy.console import console
+from wallsy.console import error_console
+from wallsy.console import describe
+from wallsy.console import warn
+from wallsy.console import fail
+from wallsy.console import confirm_success
 
 
 class WallsyLoadError(Exception):
@@ -44,7 +46,7 @@ class WallsyData:
     """
 
     config: WallsyConfig
-    file: Optional[Path] = None
+    stream: Iterable = ()  # empty iterator
 
 
 @click.group()
@@ -52,24 +54,25 @@ def cli():
     pass
 
 
-def get_stdin() -> Path:
+def yield_stdin():
     """
-    Check for a pipeline by reading the file handler for standard input and read the text content
-    if there is a value on this stream. Return this value as a Path.
+    Check for a pipeline by reading the file handler for standard input and read the content
+    if there are values on this stream. Yield these values as Path objects.
     """
 
     # S_ISFIFO determines if the mode (file type and permissions) of a given file descriptor refers to a pipe.
     # 0 is the FD for std in, 1 = stdout, 2 = stderr
     if S_ISFIFO(os.stat(0).st_mode):
+        describe(f":arrow_right-emoji: 'wallsy' got input stream from standard input")
+        for line in sys.stdin:
+            yield Path(line.strip()).expanduser().resolve()
 
-        file = Path(sys.stdin.read().strip()).expanduser().resolve()
-
-        return Path(file)
-
-    raise OSError("Stdin check: no pipeline detected for standard input.")
+    else:
+        warn("no pipeline detected for standard input")
+        # yield
 
 
-def load_url(url: str) -> Path:
+def load_url(url: str):
     """ """
 
     config = load_config()
@@ -86,7 +89,7 @@ def load_url(url: str) -> Path:
         raise WallsyLoadError("please specify a link directly to an image resource.")
 
     file_name = Path(urlparse(url).path).name
-
+    describe(f":earth_asia-emoji: 'wallsy' getting image from {url} ...", end=" ")
     try:
         dest_path = image_handler.download_image(
             url=url, file_path=dest_path / file_name
@@ -101,10 +104,13 @@ def load_url(url: str) -> Path:
     # if we get this far, we should have a validated image. make the path available to other
     # subcommands by storing in the click context's object attribute (which is designed for this purpose)
 
+    confirm_success(
+        f":white_check_mark-emoji: \n:floppy_disk: 'wallsy' loaded '{dest_path.name}' from {dest_path.parent}"
+    )
     return dest_path
 
 
-def load_file(file=None) -> Path:
+def load_file(file=None):
     """ """
 
     config = load_config()
@@ -125,6 +131,9 @@ def load_file(file=None) -> Path:
     try:
         # Note that copy2 attempts to preserve metedata, other copy funcs in shutil do not
         copy2(file, dest_path)
+        confirm_success(
+            f":floppy_disk-emoji: 'wallsy' saved '{dest_path.name}' to {dest_path.parent}"
+        )
     except SameFileError:
         warn(f"'{file.name}' is already located at {dest_path.parent}")
 
@@ -234,6 +243,23 @@ DECORATORS
 """
 
 
+def extend_stream(func):
+    """
+    Take a function that generates output(s) (or passes through new input(s) directly as an output)
+    and extend an existing stream to include these new outputs. This allows functions that don't operate
+    on received input to instead provide new inputs to a pipeline.
+    """
+
+    @wraps(func)
+    def wrapper(input_stream, *args, **kwargs):
+        def inner():
+            yield func(input_stream, *args, **kwargs)
+
+        yield from chain(input_stream, inner())
+
+    return wrapper
+
+
 def make_generator(func):
     """
     Take a function that accepts and returns a single input parameter and convert it into
@@ -241,9 +267,18 @@ def make_generator(func):
     """
 
     @wraps(func)
-    def wrapper(input_stream, *args, **kwargs):
-        for input in input_stream:
-            yield func(input, *args, **kwargs)
+    def wrapper(input_stream=None, *args, **kwargs):
+
+        # for input in input_stream:
+        #     yield func(input, *args, **kwargs)
+
+        try:
+
+            while input := next(input_stream):
+                yield func(input, *args, **kwargs)
+
+        except StopIteration:
+            return
 
     return wrapper
 
@@ -293,11 +328,14 @@ def require_file(func):
     """
     Decorator for callbacks that require a filename to be explicitly passed in order to perform
     desired action. This decorator abstracts checking for this parameter and raises the necessary exception.
+
+    NOTE: getcallargs is deprecated, need to move to signature() call instead.
     """
 
     @wraps(func)
     def wrapper(*args, **kwargs):
         func_args = getcallargs(func, *args, **kwargs)
+        print(func_args.get("file"))
         if func_args.get("file") is None:
             raise click.ClickException(
                 f"Command '{func.__name__}' did not receive a filename as part of pipeline. Did you run 'add' or 'random' to source an image?"
