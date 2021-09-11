@@ -14,6 +14,7 @@ from functools import partial
 from inspect import getcallargs
 from urllib.parse import urlparse
 from collections.abc import Iterator, Iterable
+import inspect
 
 import click
 from rich import print
@@ -105,7 +106,7 @@ def load_url(url: str):
     # subcommands by storing in the click context's object attribute (which is designed for this purpose)
 
     confirm_success(
-        f":white_check_mark-emoji: \n:floppy_disk: 'wallsy' loaded '{dest_path.name}' from {dest_path.parent}"
+        f":white_check_mark-emoji: \n:floppy_disk: '{get_caller_func_name()}' saved '{dest_path.name}' to {dest_path.parent}"
     )
     return dest_path
 
@@ -131,8 +132,10 @@ def load_file(file=None):
     try:
         # Note that copy2 attempts to preserve metedata, other copy funcs in shutil do not
         copy2(file, dest_path)
+        # inspect.getouterframes(inspect.currentframe())[1]
+        # inspect.currentframe().f_back.f_code
         confirm_success(
-            f":floppy_disk-emoji: 'wallsy' saved '{dest_path.name}' to {dest_path.parent}"
+            f":floppy_disk-emoji: '{get_caller_func_name()}' saved '{dest_path.name}' to {dest_path.parent}"
         )
     except SameFileError:
         warn(f"'{file.name}' is already located at {dest_path.parent}")
@@ -143,91 +146,31 @@ def load_file(file=None):
     return dest_path
 
 
-def load(file=None, url=None) -> Path:
+def get_caller_func_name(index=2) -> str:
     """
-    Retrieve a new image from either local filesystem or URL (must point directly to an accessible image resource).
+    Return the name of the function that the caller of this utility function was called by. Typical use case is
+    for logging and printing the subcommand name (which matches the func name by Wallsy design) instead of
+    the caller's name.
     """
 
-    # Catch usage errors immediately on invocation.
-    # At least one (but not both) of --file or --url are required.
-    error_msg = (
-        "Provide argument for at least one (and only one) of the following: file, url"
-    )
-    if file is None and url is None:
+    try:
+        frame = inspect.currentframe()
 
-        raise WallsyLoadError(error_msg)
+    except Exception as error:
+        raise UserWarning(
+            "There was an error trying to find out the caller function for pretty printing a message."
+        )
 
-    if file is not None and url is not None:
+    else:
+        """
+        I don't love this, but we have a list of frames where the 0th index is get_caller_func,
+        the 1st index is the caller of get_caller_func,
+        and 2nd index is the caller of the caller (presumably the name of the function you want)
+        """
+        return inspect.getouterframes(frame)[index].function
 
-        raise WallsyLoadError(error_msg)
-
-    """set destination path for where the image should be stored. 
-    images are intended to be modified so input paths shouldn't be 
-    used as the destination path as doing so will modify the original input.
-    in the future maybe allow this to be specified as an option to 
-    modify the input file. e.g. --no-save"""
-
-    config = load_config()
-    dest_path = config.WALLSY_MEDIA_DIR
-
-    """
-    FILE option
-    """
-    if file:
-
-        # if file is not a Path, (can also be str or TextIOBuffer), convert to Path
-        file = Path(file).expanduser().resolve()
-        dest_path = dest_path / file.name
-
-        # validate that the input file is a valid image.
-        try:
-            image_handler.validate_image(file)
-
-        except image_handler.InvalidImageError as error:
-            raise WallsyLoadError(str(error))
-
-        # copy the file contents to destination
-        try:
-            # Note that copy2 attempts to preserve metedata, other copy funcs in shutil do not
-            copy2(file, dest_path)
-            print(f"Copied {file.name} to {dest_path}")
-        except SameFileError:
-            print(f"{file.name} is already located at {dest_path}")
-
-    """
-    URL option
-    """
-    if url:
-
-        # let's try to prevent as many obviously invalid requests from getting through
-        # as is realistically possible.
-
-        # if there is no path component to the url, the provided url is
-        # (almost) certainly not a direct link to an image resource.
-        # e.g. https://example.com/  -> path is ""
-        #      https://example.com/mycat.jpg  -> path is /mycat.jpg
-        if urlparse(url).path in ("", "/"):
-            raise WallsyLoadError(
-                "Please specify a link directly to an image resource."
-            )
-
-        file_name = Path(urlparse(url).path).name
-
-        try:
-            dest_path = image_handler.download_image(
-                url=url, file_path=dest_path / file_name
-            )
-        except image_handler.ImageDownloadError as error:
-            raise WallsyLoadError(str(error))
-        except image_handler.InvalidImageError as error:
-            raise WallsyLoadError(str(error))
-        except Exception as error:
-            raise WallsyLoadError(f"Something unexpected happened: {error}")
-
-    # if we get this far, we should have a validated image. make the path available to other
-    # subcommands by storing in the click context's object attribute (which is designed for this purpose)
-
-    return dest_path
+    finally:
+        del frame
 
 
 @cli.command()
@@ -267,18 +210,10 @@ def make_generator(func):
     """
 
     @wraps(func)
-    def wrapper(input_stream=None, *args, **kwargs):
+    def wrapper(input_stream, *args, **kwargs):
 
-        # for input in input_stream:
-        #     yield func(input, *args, **kwargs)
-
-        try:
-
-            while input := next(input_stream):
-                yield func(input, *args, **kwargs)
-
-        except StopIteration:
-            return
+        for input in input_stream:
+            yield func(input, *args, **kwargs)
 
     return wrapper
 
@@ -335,7 +270,6 @@ def require_file(func):
     @wraps(func)
     def wrapper(*args, **kwargs):
         func_args = getcallargs(func, *args, **kwargs)
-        print(func_args.get("file"))
         if func_args.get("file") is None:
             raise click.ClickException(
                 f"Command '{func.__name__}' did not receive a filename as part of pipeline. Did you run 'add' or 'random' to source an image?"

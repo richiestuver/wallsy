@@ -15,6 +15,7 @@ from shutil import copy2
 from io import StringIO
 from itertools import chain
 from collections.abc import Iterable
+import inspect
 
 import click
 
@@ -32,7 +33,6 @@ from .config import init
 
 from .utils import WallsyData
 from .utils import yield_stdin
-from .utils import load
 from .utils import load_file
 from .utils import load_url
 from .utils import require_file
@@ -306,6 +306,7 @@ def add(file_from_pipeline: Path = None, file: Path = None, url: str = None):
 )
 @make_callback
 @extend_stream
+# @make_generator
 @catch_errors
 @click.pass_obj
 def random(obj: WallsyData, file_from_pipeline, keyword, dimensions, local):
@@ -342,11 +343,7 @@ def random(obj: WallsyData, file_from_pipeline, keyword, dimensions, local):
             keywords=keyword if keyword else None,
             dimensions=dimensions if dimensions else None,
         )
-        describe(f":earth_asia-emoji: 'random' getting image from {url} ...", end=" ")
-        file = load(url=url)
-        confirm_success(
-            f":white_check_mark-emoji: \n:floppy_disk: 'random' saved '{file.name}' to {file.parent}"
-        )
+        file = load_url(url=url)
 
     return file
 
@@ -457,23 +454,23 @@ def desktop(obj: WallsyData, file: Path):
                 f":desktop_computer-emoji:  'desktop' added a copy of '{file.name}' to {wallpaper_dir}"
             )
 
-            wallpaper_handler.update_wallpaper(img_path=wallpaper_dir / file.name)
-            confirm_success(
-                f":white_check_mark-emoji: 'desktop' updated wallpaper to {wallpaper_dir / file.name}"
-            )
-
         else:
             warn(f"'{file.name}' is already located at {wallpaper_dir}")
+
+        wallpaper_handler.update_wallpaper(img_path=wallpaper_dir / file.name)
+        confirm_success(
+            f":white_check_mark-emoji: 'desktop' updated wallpaper to {wallpaper_dir / file.name}"
+        )
 
     else:  # retrieve the currently set desktop wallpaper and use that as input for the pipeline
         file = wallpaper_handler.get_current_wallpaper()
         describe(
-            f":desktop_computer-emoji:  'desktop' retrieved current background '{file}'"
+            f":desktop_computer-emoji: 'desktop' retrieved current background '{file}'"
         )
         file = load_file(file=file)
-        confirm_success(
-            f":floppy_disk-emoji: 'poster' saved image as '{file.name}' in {file.parent}"
-        )
+        # confirm_success(
+        #     f":floppy_disk-emoji: 'desktop' saved image as '{file.name}' in {file.parent}"
+        # )
 
     return file
 
