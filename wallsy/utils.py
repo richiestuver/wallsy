@@ -69,7 +69,7 @@ def yield_stdin():
 
     else:
         warn("no pipeline detected for standard input")
-        # yield
+        return
 
 
 def load_url(url: str):

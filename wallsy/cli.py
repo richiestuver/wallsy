@@ -437,9 +437,10 @@ def posterize(file: Path, colors: int):
 
 
 @cli.command(name="desktop")
-@click.pass_obj
 @make_callback
+@make_generator
 @catch_errors
+@click.pass_obj
 def desktop(obj: WallsyData, file: Path):
     """
     Update the desktop background with the specified image.
