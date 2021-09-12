@@ -158,7 +158,7 @@ def get_caller_func_name(index=2) -> str:
 
     except Exception as error:
         raise UserWarning(
-            "There was an error trying to find out the caller function for pretty printing a message."
+            f"There was an error trying to find out the caller function for pretty printing a message: {error}"
         )
 
     else:
@@ -212,8 +212,13 @@ def make_generator(func):
     @wraps(func)
     def wrapper(input_stream, *args, **kwargs):
 
-        for input in input_stream:
-            yield func(input, *args, **kwargs)
+        try:
+            while input := next(input_stream):
+                # print(inspect.getgeneratorstate(input_stream))
+                yield func(input, *args, **kwargs)
+
+        except StopIteration:
+            pass
 
     return wrapper
 
