@@ -8,14 +8,14 @@ to auto update on a recurring interval.
 This module controls command line "routes" for interacting with the application.
 """
 
-from typing import Optional
 from random import sample
 from pathlib import Path
 from shutil import copy2
 from io import StringIO
 from itertools import chain
 from collections.abc import Iterable
-import inspect
+from functools import singledispatch
+from collections.abc import Generator
 
 import click
 
@@ -238,7 +238,7 @@ def cli(
         (load_url(url) for url in urls),
     ]
 
-    stream = chain(*streams)
+    stream = (file for file in chain(*streams))
     ctx.obj.stream = stream
     return stream
 
@@ -306,7 +306,6 @@ def add(file_from_pipeline: Path = None, file: Path = None, url: str = None):
 )
 @make_callback
 @extend_stream
-# @make_generator
 @catch_errors
 @click.pass_obj
 def random(obj: WallsyData, file_from_pipeline, keyword, dimensions, local):
@@ -433,46 +432,107 @@ def posterize(file: Path, colors: int):
     return file
 
 
-@cli.command(name="desktop")
+@cli.command()
 @make_callback
-@make_generator
-@catch_errors
+def desktop(stream):
+    """
+    Set your desktop background or use your current desktop as a source image.
+    """
+
+    """
+    The desktop command supports two modes: operating on the current stream (setting 
+    the desktop background as a side effect) or supplying additional image(s) to the 
+    stream (retrieving the filepath of the current desktop background). 
+
+    This is made possible by evaluating the state of the generator represented by the stream
+    and determining if the generator is both empty and never supplied any items. We are sort 
+    of abusing the StopIteration behavior of generators to accomplish this because there is not
+    a simple "is empty" style function call to get the state of the underlying iterator.
+
+    In a future refactor, we might be able to assess this without the try/except block by
+    making a call to inspect.getgeneratorlocals() and seeing if the dict that is returned as
+    the first argument is empty. 
+
+    For now, we check the state of a variable holding Path items retrieved from the stream generator
+    to determine our condition. If StopIteration is raised no items were pulled from the generator
+    then we execute the version of the desktop command that supplies additional items to the stream for 
+    use in subsequent subcommands. 
+
+    The dispatching logic is greatly simplified (read: abstracted partly away from this Click controller)
+    by the functools @singledispatch decorator. Rather than doing this by hand, the logic here purely pertains 
+    to how to determine the appropriate condition and then passing a variable argument type (either 
+    a single Path object or the generator itself) to the dispatcher.
+
+    Note that the inspect.getgeneratorstate(<generator_object...>) is insanely helpful for debugging 
+    code that works with generators.
+    """
+
+    file = None
+
+    try:
+        while file := next(stream):
+            yield _desktop(file)
+
+    except StopIteration:
+        if file is None:
+            yield from _desktop(stream)
+
+
+@singledispatch
+def _desktop(arg):
+    """
+    Callback for the desktop command. This function is a dispatcher that
+    calls out to different helper functions depending on the argument type
+    retrieved. Passing in a Path object should set the desktop background.
+    Passing in a Generator object should extend the iterator by including the
+    retrieving the current desktop wallpaper path and appending it to the
+    iterator items.
+    """
+
+    raise UserWarning(f"Invalid argument received for {__name__}: {arg}")
+
+
+@_desktop.register
 @click.pass_obj
-def desktop(obj: WallsyData, file: Path):
+def _set_desktop(obj, file: Path):
     """
-    Update the desktop background with the specified image.
+    Called by _desktop dispatcher to set the desktop wallpaper.
     """
 
-    if file:
-        wallpaper_dir = obj.config.WALLSY_WALLPAPER_DIR
+    wallpaper_dir = obj.config.WALLSY_WALLPAPER_DIR
 
-        if not Path(wallpaper_dir / file.name).exists():
+    if not Path(wallpaper_dir / file.name).exists():
 
-            # note: copy2 attempts to preserve file metadata. other copy functions in shutil do not do so
-            copy2(file, wallpaper_dir / file.name)
-            describe(
-                f":desktop_computer-emoji:  'desktop' added a copy of '{file.name}' to {wallpaper_dir}"
-            )
-
-        else:
-            warn(f"'{file.name}' is already located at {wallpaper_dir}")
-
-        wallpaper_handler.update_wallpaper(img_path=wallpaper_dir / file.name)
-        confirm_success(
-            f":white_check_mark-emoji: 'desktop' updated wallpaper to {wallpaper_dir / file.name}"
-        )
-
-    else:  # retrieve the currently set desktop wallpaper and use that as input for the pipeline
-        file = wallpaper_handler.get_current_wallpaper()
+        # note: copy2 attempts to preserve file metadata. other copy functions in shutil do not do so
+        copy2(file, wallpaper_dir / file.name)
         describe(
-            f":desktop_computer-emoji: 'desktop' retrieved current background '{file}'"
+            f":desktop_computer-emoji:  'desktop' added a copy of '{file.name}' to {wallpaper_dir}"
         )
-        file = load_file(file=file)
-        # confirm_success(
-        #     f":floppy_disk-emoji: 'desktop' saved image as '{file.name}' in {file.parent}"
-        # )
+
+    else:
+        warn(f"'{file.name}' is already located at {wallpaper_dir}")
+
+    wallpaper_handler.update_wallpaper(img_path=wallpaper_dir / file.name)
+    confirm_success(
+        f":white_check_mark-emoji: 'desktop' updated wallpaper to {wallpaper_dir / file.name}"
+    )
 
     return file
+
+
+@_desktop.register
+def _get_desktop(stream: Generator):
+    """
+    Called by _desktop dispatcher to retrive the current wallpaper and extend the
+    provided generator with the Path of the wallpaper.
+    """
+
+    file = wallpaper_handler.get_current_wallpaper()
+    describe(
+        f":desktop_computer-emoji: 'desktop' retrieved current background '{file}'"
+    )
+    file = load_file(file=file)
+    return (img for img in chain(stream, [file]))
 
 
 @cli.command()
