@@ -1,6 +1,5 @@
 import os
 import sys
-import json
 import shutil
 from typing import Optional
 from dataclasses import dataclass
@@ -212,13 +211,15 @@ def make_generator(func):
     @wraps(func)
     def wrapper(input_stream, *args, **kwargs):
 
-        try:
-            while input := next(input_stream):
-                # print(inspect.getgeneratorstate(input_stream))
-                yield func(input, *args, **kwargs)
+        for input in input_stream:
+            yield func(input, *args, **kwargs)
+        # try:
+        #     while input := next(input_stream):
+        #         # print(inspect.getgeneratorstate(input_stream))
+        #         yield func(input, *args, **kwargs)
 
-        except StopIteration:
-            pass
+        # except StopIteration:
+        #     pass
 
     return wrapper
 
