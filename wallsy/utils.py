@@ -10,10 +10,16 @@ from pathlib import Path
 from shutil import copy2, SameFileError
 from functools import wraps
 from functools import partial
+
 from inspect import getcallargs
+from inspect import getouterframes
+from inspect import currentframe
+
 from urllib.parse import urlparse
+from urllib.parse import urlunparse
+from urllib.parse import ParseResult
+
 from collections.abc import Iterator, Iterable
-import inspect
 
 import click
 from rich import print
@@ -151,7 +157,7 @@ def get_caller_func_name(index=2) -> str:
     """
 
     try:
-        frame = inspect.currentframe()
+        frame = currentframe()
 
     except Exception as error:
         raise UserWarning(
@@ -164,7 +170,10 @@ def get_caller_func_name(index=2) -> str:
         the 1st index is the caller of get_caller_func,
         and 2nd index is the caller of the caller (presumably the name of the function you want)
         """
-        return inspect.getouterframes(frame)[index].function
+        return getouterframes(frame)[index].function
+
+    # according to the inspect module docs, it's important to cleanup references to frame objects
+    # after they are done being used due to hanging around in memory afterward.
 
     finally:
         del frame
