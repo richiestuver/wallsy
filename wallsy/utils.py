@@ -131,8 +131,6 @@ def load_file(file=None):
     try:
         # Note that copy2 attempts to preserve metedata, other copy funcs in shutil do not
         copy2(file, dest_path)
-        # inspect.getouterframes(inspect.currentframe())[1]
-        # inspect.currentframe().f_back.f_code
         confirm_success(
             f":floppy_disk-emoji: '{get_caller_func_name()}' saved '{dest_path.name}' to {dest_path.parent}"
         )
@@ -213,13 +211,6 @@ def make_generator(func):
 
         for input in input_stream:
             yield func(input, *args, **kwargs)
-        # try:
-        #     while input := next(input_stream):
-        #         # print(inspect.getgeneratorstate(input_stream))
-        #         yield func(input, *args, **kwargs)
-
-        # except StopIteration:
-        #     pass
 
     return wrapper
 
