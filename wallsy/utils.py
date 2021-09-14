@@ -8,21 +8,16 @@ from stat import S_ISFIFO
 from itertools import chain
 from shutil import copy2, SameFileError
 
-from functools import wraps
-from functools import partial
 from functools import singledispatch
 
-from inspect import getcallargs
 from inspect import getouterframes
 from inspect import currentframe
 
 from pathlib import Path
 
-from urllib.parse import urlparse
-from urllib.parse import urlunparse
 from urllib.parse import ParseResult
 
-from collections.abc import Iterator, Iterable
+from collections.abc import Iterable
 
 import click
 from rich import print
@@ -30,11 +25,8 @@ from rich import print
 from wallsy import image_handler
 
 from wallsy.config import WallsyConfig
-from wallsy.config import WallsyConfigError
 from wallsy.config import load_config
 
-from wallsy.console import console
-from wallsy.console import error_console
 from wallsy.console import describe
 from wallsy.console import warn
 from wallsy.console import fail
@@ -200,118 +192,3 @@ def reset():
 
     load_config()
     shutil.rmtree(os.environ["WALLSY_CONFIG_DIR"])
-
-
-"""
-DECORATORS
-"""
-
-
-def extend_stream(func):
-    """
-    Take a function that generates output(s) (or passes through new input(s) directly as an output)
-    and extend an existing stream to include these new outputs. This allows functions that don't operate
-    on received input to instead provide new inputs to a pipeline.
-    """
-
-    @wraps(func)
-    def wrapper(input_stream, *args, **kwargs):
-        def inner():
-            yield func(input_stream, *args, **kwargs)
-
-        yield from chain(input_stream, inner())
-
-    return wrapper
-
-
-def make_generator(func):
-    """
-    Take a function that accepts and returns a single input parameter and convert it into
-    a function that accepts an input stream and yields the return value of the original function.
-    """
-
-    @wraps(func)
-    def wrapper(input_stream, *args, **kwargs):
-
-        for input in input_stream:
-            yield func(input, *args, **kwargs)
-
-    return wrapper
-
-
-def make_callback(func):
-    """
-    Receive a function (presumably, that does not itself return a function) and convert it into a new function that returns the
-    original function as a callback function.
-
-    The Wallsy CLI is built on a callback architecture. Subcommands are invoked on the command line, each of which return a callback function
-    immediately upon invocation. Once all subcommands have been invoked, a separate "process callbacks" function iterates over each of the callback
-    function objects and executes them. When a function is decorated with make_callback, the callback itself will have the
-    same signature and behave exactly as the original function. The invoking the origianl function name, on the otherhand, merely returns the callback
-    which now must be invoked to actually execute the original function body.
-
-    It is possible to achieve the same behavior by manually defining an inner function within each subcommand function definition. Similar to:
-
-        def my_command(cli_args):  # any args received from command line invocation
-
-            # any actions that would be performed immediately upon command invocation here
-
-            def my_callback(callback_args)  # any args required for callback but not supplied directly on command line
-
-                # body of command logic in here, processed by callback processor at a later time
-
-                return whatever_you_need_to_for_other_command_callbacks_etc
-
-            return my_callback
-
-    However, the benefit to using the callback factory pattern here is that it eliminates all of the boilerplate code for doing so and reduces the
-    function body to only the logic necessary for performing the desired action of the command itsef.
-    """
-
-    @wraps(func)
-    def callback(*args, **kwargs):
-        @wraps(func)
-        def wrapper(*fargs, **fkwargs):
-            new_func = partial(func, *args, **kwargs)
-            return new_func(*fargs, **fkwargs)
-
-        return wrapper
-
-    return callback
-
-
-def require_file(func):
-    """
-    Decorator for callbacks that require a filename to be explicitly passed in order to perform
-    desired action. This decorator abstracts checking for this parameter and raises the necessary exception.
-
-    NOTE: getcallargs is deprecated, need to move to signature() call instead.
-    """
-
-    @wraps(func)
-    def wrapper(*args, **kwargs):
-        func_args = getcallargs(func, *args, **kwargs)
-        if func_args.get("file") is None:
-            raise click.ClickException(
-                f"Command '{func.__name__}' did not receive a filename as part of pipeline. Did you run 'add' or 'random' to source an image?"
-            )
-        return func(*args, **kwargs)
-
-    return wrapper
-
-
-def catch_errors(func):
-    """
-    Catch and format errors with the "fail" console template and gracefully
-    exit the application with an error code.
-    """
-
-    @wraps(func)
-    def wrapper(*args, **kwargs):
-        try:
-            return func(*args, **kwargs)
-        except Exception as error:
-            fail(str(error))
-            exit(1)
-
-    return wrapper

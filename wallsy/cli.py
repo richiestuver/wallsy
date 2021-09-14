@@ -36,11 +36,12 @@ from .config import init
 from .utils import WallsyData
 from .utils import yield_stdin
 from .utils import load
-from .utils import require_file
-from .utils import make_callback
-from .utils import make_generator
-from .utils import catch_errors
-from .utils import extend_stream
+
+from .decorators import require_file
+from .decorators import make_callback
+from .decorators import make_generator
+from .decorators import catch_errors
+from .decorators import extend_stream
 
 
 """
@@ -49,22 +50,6 @@ Wallsy CLI
 This module contains the Wallsy CLI app specification and command callback function definitions.
 
 """
-
-# TODO: handle specifying a target file name for saves and what to do when a conflict occurs
-#           Prompt user for a new file name, don't create one?
-# TODO: implement scheduler!!!!
-# TODO: --dest specify target save destinations
-# TODO: how to initialize? on app invocation or on install somehow?
-# TODO: prevent non image files from getting picked up by random --local
-# TODO: rearchitecture - effects should become their own subcommands
-# TODO  add --prompt option to desktop
-# TODO: moar effects - darken and lighten, and warhol effects
-# TODO: add --overwrite option to disable saving each sub image
-# TODO: handle overwriting files appropriately?
-# TODO: refactor occurrences of os.path to pathlib.Path across app.
-# TODO: notifications to user about save and retrieval
-# TODO: fix issue where mode after posterize is incompatible with other effects like blur (ValueError)
-# TODO: unit testing
 
 
 @click.group(
