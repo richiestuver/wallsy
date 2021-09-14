@@ -1,19 +1,22 @@
 import os
 import sys
 import shutil
-from typing import Optional
+
 from dataclasses import dataclass
-from pathlib import Path
+
 from stat import S_ISFIFO
 from itertools import chain
-from pathlib import Path
 from shutil import copy2, SameFileError
+
 from functools import wraps
 from functools import partial
+from functools import singledispatch
 
 from inspect import getcallargs
 from inspect import getouterframes
 from inspect import currentframe
+
+from pathlib import Path
 
 from urllib.parse import urlparse
 from urllib.parse import urlunparse
@@ -78,7 +81,15 @@ def yield_stdin():
         return
 
 
-def load_url(url: str):
+@singledispatch
+def load(file):
+    raise Exception(
+        f"load was called incorrectly with argument: {file} of type f{type(file)}"
+    )
+
+
+@load.register
+def load_url(url: ParseResult):
     """ """
 
     config = load_config()
@@ -91,14 +102,17 @@ def load_url(url: str):
     # (almost) certainly not a direct link to an image resource.
     # e.g. https://example.com/  -> path is ""
     #      https://example.com/mycat.jpg  -> path is /mycat.jpg
-    if urlparse(url).path in ("", "/"):
+    if url.path in ("", "/"):
         raise WallsyLoadError("please specify a link directly to an image resource.")
 
-    file_name = Path(urlparse(url).path).name
-    describe(f":earth_asia-emoji: 'wallsy' getting image from {url} ...", end=" ")
+    file_name = Path(url.path).name
+    describe(
+        f":earth_asia-emoji: '{get_caller_func_name()}' getting image from {url.geturl()} ...",
+        end=" ",
+    )
     try:
         dest_path = image_handler.download_image(
-            url=url, file_path=dest_path / file_name
+            url=url.geturl(), file_path=dest_path / file_name
         )
     except image_handler.ImageDownloadError as error:
         raise WallsyLoadError(str(error))
@@ -116,7 +130,8 @@ def load_url(url: str):
     return dest_path
 
 
-def load_file(file=None):
+@load.register
+def load_file(file: Path):
     """ """
 
     config = load_config()

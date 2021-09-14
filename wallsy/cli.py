@@ -10,6 +10,8 @@ This module controls command line "routes" for interacting with the application.
 
 from random import sample
 from pathlib import Path
+from urllib.parse import urlparse
+from urllib.parse import ParseResult
 from shutil import copy2
 from io import StringIO
 from itertools import chain
@@ -33,8 +35,7 @@ from .config import init
 
 from .utils import WallsyData
 from .utils import yield_stdin
-from .utils import load_file
-from .utils import load_url
+from .utils import load
 from .utils import require_file
 from .utils import make_callback
 from .utils import make_generator
@@ -233,9 +234,9 @@ def cli(
         console.file = StringIO()
 
     streams = [
-        (load_file(file) for file in yield_stdin() if file),
-        (load_file(file) for file in files),
-        (load_url(url) for url in urls),
+        (load(Path(file)) for file in yield_stdin() if file),
+        (load(Path(file)) for file in files),
+        (load(urlparse(url)) for url in urls),
     ]
 
     stream = (file for file in chain(*streams))
@@ -252,8 +253,9 @@ def cli(
     ),  # make sure that file paths are always Path objects.
     help="Load an image from file path. Ensures image is valid and stores a copy of the image in the Wallsy folder.",
 )
-@click.option("--url", "-u")
+@click.option("--url", "-u", type=str)
 @make_callback
+@extend_stream
 @catch_errors
 def add(file_from_pipeline: Path = None, file: Path = None, url: str = None):
     """
@@ -261,16 +263,14 @@ def add(file_from_pipeline: Path = None, file: Path = None, url: str = None):
     or specify a file / url manually.
     """
 
-    if file_from_pipeline:
-        file: Path = load_file(file=file_from_pipeline)
+    # if file_from_pipeline:
+    #     file: Path = load_file(file=file_from_pipeline)
 
-    elif file:
-        file: Path = load_file(file=file)
+    if file:
+        file: Path = load(file)
 
     elif url:
-        describe(f":earth_asia-emoji: 'add' getting image from {url} ...", end=" ")
-        file: Path = load_url(url=url)
-        confirm_success(":white_check_mark-emoji:")
+        file: Path = load(urlparse(url))
 
     else:
         raise click.UsageError(
@@ -322,10 +322,10 @@ def random(obj: WallsyData, file_from_pipeline, keyword, dimensions, local):
     finite number of files in a single line on the terminal.
     """
 
-    if file_from_pipeline:
-        warn(
-            f"'random' received a file from a previous command. Ignoring that file and generating a new random image..."
-        )
+    # if file_from_pipeline:
+    #     warn(
+    #         f"'random' received a file from a previous command. Ignoring that file and generating a new random image..."
+    #     )
 
     file = None
 
@@ -342,7 +342,7 @@ def random(obj: WallsyData, file_from_pipeline, keyword, dimensions, local):
             keywords=keyword if keyword else None,
             dimensions=dimensions if dimensions else None,
         )
-        file = load_url(url=url)
+        file = load(urlparse(url))
 
     return file
 
@@ -531,7 +531,7 @@ def _get_desktop(stream: Generator):
     describe(
         f":desktop_computer-emoji: 'desktop' retrieved current background '{file}'"
     )
-    file = load_file(file=file)
+    file = load(file)
     return (img for img in chain(stream, [file]))
 
 
