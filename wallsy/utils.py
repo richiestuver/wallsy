@@ -48,6 +48,8 @@ class WallsyData:
 
     config: WallsyConfig
     stream: Iterable = ()  # empty iterator
+    repeat: bool = False
+    interval: int = 0
 
 
 @click.group()
@@ -74,14 +76,14 @@ def yield_stdin():
 
 
 @singledispatch
-def load(file):
+def load(file) -> Path:
     raise Exception(
         f"load was called incorrectly with argument: {file} of type f{type(file)}"
     )
 
 
 @load.register
-def load_url(url: ParseResult):
+def load_url(url: ParseResult) -> Path:
     """ """
 
     config = load_config()
@@ -123,7 +125,7 @@ def load_url(url: ParseResult):
 
 
 @load.register
-def load_file(file: Path):
+def load_file(file: Path) -> Path:
     """ """
 
     config = load_config()

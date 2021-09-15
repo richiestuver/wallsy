@@ -40,6 +40,7 @@ command will process all files provided as input and add a sparkle effect:
 
 from stat import S_ISFIFO
 from itertools import chain
+from itertools import cycle
 from functools import wraps
 from functools import partial
 from inspect import getcallargs
@@ -75,6 +76,26 @@ def make_generator(func):
 
         for input in input_stream:
             yield func(input, *args, **kwargs)
+
+    return wrapper
+
+
+def make_cycle(func):
+    """
+    Transform the input stream from a generator that is exhausted into a
+    cycle that repeats itself when exhausted ad infinitum.
+    """
+
+    @wraps(func)
+    def wrapper(input_stream, *args, **kwargs):
+
+        # for input in cycle(input_stream):
+        #     yield func(input, *args, **kwargs)
+
+        def inner():
+            yield func(input_stream, *args, **kwargs)
+
+        yield from cycle(chain(input_stream, inner()))
 
     return wrapper
 

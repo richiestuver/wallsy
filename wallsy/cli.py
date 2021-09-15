@@ -15,9 +15,11 @@ from urllib.parse import ParseResult
 from shutil import copy2
 from io import StringIO
 from itertools import chain
+from itertools import cycle
 from collections.abc import Iterable
 from functools import singledispatch
 from collections.abc import Generator
+from time import sleep
 
 import click
 
@@ -39,6 +41,7 @@ from .utils import load
 
 from .decorators import require_file
 from .decorators import make_callback
+from .decorators import make_cycle
 from .decorators import make_generator
 from .decorators import catch_errors
 from .decorators import extend_stream
@@ -532,9 +535,24 @@ def show(file: Path):
     return file
 
 
+@cli.command(name="every")
+@make_callback
+@make_generator
+@click.pass_obj
+@click.argument("interval", type=int)
+def repeat(obj: WallsyData, file, interval):
+    """Set wallsy to repeat this action on an interval"""
+
+    obj.repeat = True
+    obj.interval = interval
+    confirm_success(f"Waiting {interval}s...")
+
+    return file
+
+
 @cli.result_callback()
 @click.pass_obj
-@catch_errors
+# @catch_errors
 def process_pipeline(obj: WallsyData, callbacks, *args, **kwargs):
     """
     The result_callback decorator supplies this function with an argument containing all of the return values from
@@ -573,13 +591,22 @@ def process_pipeline(obj: WallsyData, callbacks, *args, **kwargs):
     are generally those used to source an image for processing, e.g. "load" or "random"
     """
 
-    stream: Iterable = obj.stream
+    def process_stream():
 
-    for callback in callbacks:
-        stream = callback(stream)
+        stream: Iterable = obj.stream
 
-    for _ in stream:
-        pass
+        for callback in callbacks:
+            stream = callback(stream)
+
+        for _ in stream:
+            pass
+
+        sleep(obj.interval) if obj.interval else ...
+
+    # do at least once, then bail out if no cycle
+    process_stream()
+    while obj.repeat:
+        process_stream()
 
 
 if __name__ == "__main__":
