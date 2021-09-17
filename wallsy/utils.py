@@ -49,7 +49,6 @@ class WallsyData:
     config: WallsyConfig
     stream: Iterable = ()  # empty iterator
     repeat: bool = False
-    interval: int = 0
 
 
 @click.group()

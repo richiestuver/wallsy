@@ -535,19 +535,55 @@ def show(file: Path):
     return file
 
 
+# @cli.command(name="every")
+# @make_callback
+# @make_generator
+# @click.pass_obj
+# @click.argument("interval", type=int)
+# def repeat(obj: WallsyData, file, interval):
+#     """Set wallsy to repeat this action on an interval"""
+
+#     obj.repeat = True
+#     describe(f"sleeping {interval}s...")
+#     sleep(interval)
+
+#     return file
+
+
 @cli.command(name="every")
-@make_callback
-@make_generator
+# @make_callback
+# @make_generator
 @click.pass_obj
 @click.argument("interval", type=int)
-def repeat(obj: WallsyData, file, interval):
+def repeat(obj: WallsyData, interval):
     """Set wallsy to repeat this action on an interval"""
 
-    obj.repeat = True
-    obj.interval = interval
-    confirm_success(f"Waiting {interval}s...")
+    # set the repeat bool only once OUTSIDE of the callback, otherwise we are
+    # needlessly resetting this value on every single repeat of the callback cycle.
+    obj.repeat = True  # controls whether to repeat the callback iteration
 
-    return file
+    # custom callback generator function that passes through the OG file after an interval delay
+    @make_generator
+    def _repeat(file):
+        describe(f"sleeping {interval}s...")
+        sleep(interval)
+        return file
+
+    return _repeat
+
+
+# @cli.command("every2")
+# @make_callback
+# def repeat2(stream):
+#     """ this version worked when a while true statement was added to extend_stream"""
+
+#     stream = cycle(stream)
+
+#     for input in stream:
+#         print(input)
+#         yield input
+#         print("sleeping 2 seconds...")
+#         sleep(2)
 
 
 @cli.result_callback()
@@ -586,9 +622,8 @@ def process_pipeline(obj: WallsyData, callbacks, *args, **kwargs):
     """
 
     """
-    all callbacks either act on a file, return a file, or both. 
-    callbacks that return a file but ignore filenames provided as input 
-    are generally those used to source an image for processing, e.g. "load" or "random"
+    all callbacks act on a stream (generator) either by yielding a modification to each item in the iterable
+    or extending the stream by chaining an additional iterable to the generator.
     """
 
     def process_stream():
@@ -600,8 +635,6 @@ def process_pipeline(obj: WallsyData, callbacks, *args, **kwargs):
 
         for _ in stream:
             pass
-
-        sleep(obj.interval) if obj.interval else ...
 
     # do at least once, then bail out if no cycle
     process_stream()
