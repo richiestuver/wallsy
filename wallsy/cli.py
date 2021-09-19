@@ -8,43 +8,19 @@ to auto update on a recurring interval.
 This module controls command line "routes" for interacting with the application.
 """
 
-from random import sample
 from pathlib import Path
 from urllib.parse import urlparse
-from urllib.parse import ParseResult
-from shutil import copy2
 from io import StringIO
 from itertools import chain
-from itertools import cycle
-from collections.abc import Iterable
-from functools import singledispatch
-from collections.abc import Generator
-from time import sleep
 
 import click
 
-from . import image_handler
-from . import wallpaper_handler
-from . import unsplash_handler
+from wallsy.cli_utils.decorators import *
+from wallsy.cli_utils.utils import *
+from wallsy.cli_utils.console import *
 
-from .console import console
-from .console import warn
-from .console import describe
-from .console import confirm_success
-
-from .config import WallsyConfig
-from .config import init
-
-from .utils import WallsyData
-from .utils import yield_stdin
-from .utils import load
-
-from .decorators import require_file
-from .decorators import make_callback
-from .decorators import make_cycle
-from .decorators import make_generator
-from .decorators import catch_errors
-from .decorators import extend_stream
+from wallsy.config import WallsyConfig
+from wallsy.config import init
 
 
 """
@@ -232,360 +208,6 @@ def cli(
     return stream
 
 
-@cli.command()
-@click.option(
-    "--file",
-    "-f",
-    type=click.Path(
-        path_type=Path
-    ),  # make sure that file paths are always Path objects.
-    help="Load an image from file path. Ensures image is valid and stores a copy of the image in the Wallsy folder.",
-)
-@click.option("--url", "-u", type=str)
-@make_callback
-@extend_stream
-@catch_errors
-def add(file_from_pipeline: Path = None, file: Path = None, url: str = None):
-    """
-    Add a copy of image to the Wallsy folder. Useful for things like random --local and image management. Use as part of a pipeline
-    or specify a file / url manually.
-    """
-
-    # if file_from_pipeline:
-    #     file: Path = load_file(file=file_from_pipeline)
-
-    if file:
-        file: Path = load(file)
-
-    elif url:
-        file: Path = load(urlparse(url))
-
-    else:
-        raise click.UsageError(
-            "'add' recieved nothing from pipeline and no file or url specified."
-        )
-
-    confirm_success(
-        f":floppy_disk-emoji: 'add' loaded '{file.name}' from {file.parent}"
-    )
-    return file
-
-
-@cli.command(name="random")
-@click.option(
-    "--keyword",
-    "-q",
-    multiple=True,
-    help="Specify keyword to refine random results. Can use multiple times e.g. random -q pizza -q lemon",
-)
-@click.option(
-    "--size",
-    "-s",
-    "dimensions",
-    type=(int, int),
-    help="(--online only) specify dimensions of the image to retrieve, e.g. -s 1920 1080",
-)
-@click.option(
-    "--local/--online",
-    is_flag=True,
-    show_default=True,
-    default=False,
-    help="Grab an image from Unsplash or locally from your wallsy folder.",
-)
-@make_callback
-@extend_stream
-@catch_errors
-@click.pass_obj
-def random(obj: WallsyData, file_from_pipeline, keyword, dimensions, local):
-    """
-    Generate a random image from source (default: Unsplash).
-    """
-
-    """
-    Note: file_from_pipeline is the only argument passed to the callback function in the process_pipeline stage. This argument is
-    used by nearly all commands to operate on the currently active image. The random command, however, is intended to generate
-    new filenames for use by subsequent commands on the pipeline. If random is specified somewhere in the middle of a chain
-    of commands, the current behavior is to "ignore" input all previous commands and generate a new file as usual.
-    While probably unintended usage, this could have limited utility in the case a user wants to perform processing on a small
-    finite number of files in a single line on the terminal.
-    """
-
-    # if file_from_pipeline:
-    #     warn(
-    #         f"'random' received a file from a previous command. Ignoring that file and generating a new random image..."
-    #     )
-
-    file = None
-
-    if local:
-
-        img_set = list(obj.config.WALLSY_MEDIA_DIR.iterdir())
-        file = sample(img_set, 1)[0].resolve()
-        confirm_success(
-            f":game_die-emoji: 'random' grabbed '{file.name}' from {obj.config.WALLSY_MEDIA_DIR}"
-        )
-
-    else:
-        url = unsplash_handler.random_featured_photo(
-            keywords=keyword if keyword else None,
-            dimensions=dimensions if dimensions else None,
-        )
-        file = load(urlparse(url))
-
-    return file
-
-
-@cli.command(name="blur")
-@click.option(
-    "--radius",
-    default=5,
-    show_default=True,
-    help="Specify the pixel radius for blur effect.",
-)  # note that click options are passed to the decorated command as keyword arguments. so should be specified after positional in the signature
-@make_callback
-@make_generator
-@catch_errors
-@click.pass_obj
-@require_file
-def blur(obj: WallsyData, file: Path, radius):
-    """
-    Apply a Gaussian blur effect to image. Default pixel radius for blur is 5.
-
-    Note that Click handles exceptions in cases where invalid input is provided for radius (default value and type provided).
-    """
-
-    describe(
-        f":blue_circle-emoji: 'blur' applying blur to '{file.name}' with radius {radius}.."
-    )
-
-    file = image_handler.blur(
-        file,
-        radius=int(radius),
-        dest_path=Path(obj.config.WALLSY_EFFECTS_DIR) / file.name,
-    )
-
-    confirm_success(
-        f":floppy_disk-emoji: 'blur' saved image as '{file.name}' in {file.parent}"
-    )
-
-    return file
-
-
-@cli.command(name="noir")
-@make_callback
-@make_generator
-@catch_errors
-@click.pass_obj
-@require_file
-def noir(obj, file):
-    """Apply a noir effect to the image. Currently this only converts image to greyscale. May add
-    additional enhancements (e.g. increase contrast) in the future.
-    """
-    describe(f":detective-emoji:  'noir' applying noir effect to '{file.name}'")
-
-    file = image_handler.greyscale(
-        img_path=file,
-        path_modifier="noir",
-        dest_path=Path(obj.config.WALLSY_EFFECTS_DIR) / file.name,
-    )
-
-    confirm_success(
-        f":floppy_disk: 'noir' saved image as '{file.name}' in {file.parent}"
-    )
-
-    return file
-
-
-@cli.command()
-@click.option(
-    "--colors",
-    default=32,
-    show_default=True,
-    help="Specify the number of colors to reduce the image to (range 1-255)",
-)
-@make_callback
-@make_generator
-@catch_errors
-@require_file
-def posterize(file: Path, colors: int):
-    """
-    Apply a posterization effect to the image.
-    """
-
-    describe(f":sparkler-emoji: 'poster' applying poster effect to '{file.name}'...")
-    file = image_handler.quantize(file, path_modifier="posterize", colors=colors)
-    confirm_success(
-        f":floppy_disk-emoji: 'poster' saved image as '{file.name}' in {file.parent}"
-    )
-    return file
-
-
-@cli.command()
-@make_callback
-def desktop(stream):
-    """
-    Set your desktop background or use your current desktop as a source image.
-    """
-
-    """
-    The desktop command supports two modes: operating on the current stream (setting 
-    the desktop background as a side effect) or supplying additional image(s) to the 
-    stream (retrieving the filepath of the current desktop background). 
-
-    This is made possible by evaluating the state of the generator represented by the stream
-    and determining if the generator is both empty and never supplied any items. We are sort 
-    of abusing the StopIteration behavior of generators to accomplish this because there is not
-    a simple "is empty" style function call to get the state of the underlying iterator.
-
-    In a future refactor, we might be able to assess this without the try/except block by
-    making a call to inspect.getgeneratorlocals() and seeing if the dict that is returned as
-    the first argument is empty. 
-
-    For now, we check the state of a variable holding Path items retrieved from the stream generator
-    to determine our condition. If StopIteration is raised no items were pulled from the generator
-    then we execute the version of the desktop command that supplies additional items to the stream for 
-    use in subsequent subcommands. 
-
-    The dispatching logic is greatly simplified (read: abstracted partly away from this Click controller)
-    by the functools @singledispatch decorator. Rather than doing this by hand, the logic here purely pertains 
-    to how to determine the appropriate condition and then passing a variable argument type (either 
-    a single Path object or the generator itself) to the dispatcher.
-
-    Note that the inspect.getgeneratorstate(<generator_object...>) is insanely helpful for debugging 
-    code that works with generators.
-    """
-
-    file = None
-
-    try:
-        while file := next(stream):
-            yield _desktop(file)
-
-    except StopIteration:
-        if file is None:
-            yield from _desktop(stream)
-
-
-@singledispatch
-def _desktop(arg):
-    """
-    Callback for the desktop command. This function is a dispatcher that
-    calls out to different helper functions depending on the argument type
-    retrieved. Passing in a Path object should set the desktop background.
-    Passing in a Generator object should extend the iterator by including the
-    retrieving the current desktop wallpaper path and appending it to the
-    iterator items.
-    """
-
-    raise UserWarning(f"Invalid argument received for {__name__}: {arg}")
-
-
-@_desktop.register
-@click.pass_obj
-def _set_desktop(obj, file: Path):
-    """
-    Called by _desktop dispatcher to set the desktop wallpaper.
-    """
-
-    wallpaper_dir = obj.config.WALLSY_WALLPAPER_DIR
-
-    if not Path(wallpaper_dir / file.name).exists():
-
-        # note: copy2 attempts to preserve file metadata. other copy functions in shutil do not do so
-        copy2(file, wallpaper_dir / file.name)
-        describe(
-            f":desktop_computer-emoji:  'desktop' added a copy of '{file.name}' to {wallpaper_dir}"
-        )
-
-    else:
-        warn(f"'{file.name}' is already located at {wallpaper_dir}")
-
-    wallpaper_handler.update_wallpaper(img_path=wallpaper_dir / file.name)
-    confirm_success(
-        f":white_check_mark-emoji: 'desktop' updated wallpaper to {wallpaper_dir / file.name}"
-    )
-
-    return file
-
-
-@_desktop.register
-def _get_desktop(stream: Generator):
-    """
-    Called by _desktop dispatcher to retrive the current wallpaper and extend the
-    provided generator with the Path of the wallpaper.
-    """
-
-    file = wallpaper_handler.get_current_wallpaper()
-    describe(
-        f":desktop_computer-emoji: 'desktop' retrieved current background '{file}'"
-    )
-    file = load(file)
-    return (img for img in chain(stream, [file]))
-
-
-@cli.command()
-@make_callback
-@make_generator
-@catch_errors
-@require_file
-def show(file: Path):
-    """Show the current image using default image viewer."""
-
-    click.launch(str(file))
-    return file
-
-
-# @cli.command(name="every")
-# @make_callback
-# @make_generator
-# @click.pass_obj
-# @click.argument("interval", type=int)
-# def repeat(obj: WallsyData, file, interval):
-#     """Set wallsy to repeat this action on an interval"""
-
-#     obj.repeat = True
-#     describe(f"sleeping {interval}s...")
-#     sleep(interval)
-
-#     return file
-
-
-@cli.command(name="every")
-# @make_callback
-# @make_generator
-@click.pass_obj
-@click.argument("interval", type=int)
-def repeat(obj: WallsyData, interval):
-    """Set wallsy to repeat this action on an interval"""
-
-    # set the repeat bool only once OUTSIDE of the callback, otherwise we are
-    # needlessly resetting this value on every single repeat of the callback cycle.
-    obj.repeat = True  # controls whether to repeat the callback iteration
-
-    # custom callback generator function that passes through the OG file after an interval delay
-    @make_generator
-    def _repeat(file):
-        describe(f"sleeping {interval}s...")
-        sleep(interval)
-        return file
-
-    return _repeat
-
-
-# @cli.command("every2")
-# @make_callback
-# def repeat2(stream):
-#     """ this version worked when a while true statement was added to extend_stream"""
-
-#     stream = cycle(stream)
-
-#     for input in stream:
-#         print(input)
-#         yield input
-#         print("sleeping 2 seconds...")
-#         sleep(2)
-
-
 @cli.result_callback()
 @click.pass_obj
 # @catch_errors
@@ -603,15 +225,6 @@ def process_pipeline(obj: WallsyData, callbacks, *args, **kwargs):
     """
 
     """
-    Subcommand clobbering. If conflicting subcommands are provided, e.g. "add" and "random" which
-    both output a filepath pointing toward a valid image, the one specified later in the pipeline
-    will overwrite the results of the previous. 
-    
-    Theoretically should be able to do cool things like stream of multiple images, but save 
-    that for a later date. 
-    """
-
-    """
     Pipeline ordering
 
     Image processing follows this general flow: 
@@ -626,21 +239,28 @@ def process_pipeline(obj: WallsyData, callbacks, *args, **kwargs):
     or extending the stream by chaining an additional iterable to the generator.
     """
 
-    def process_stream():
-
-        stream: Iterable = obj.stream
+    def process_stream(stream: WallsyData):
 
         for callback in callbacks:
             stream = callback(stream)
 
-        for _ in stream:
+        for _ in stream.stream:
             pass
 
     # do at least once, then bail out if no cycle
-    process_stream()
-    while obj.repeat:
-        process_stream()
+    stream: WallsyData = obj
+    process_stream(stream)
+
+    while stream.repeat:
+        process_stream(stream)
+
+
+def main():
+
+    commands = import_commands()
+    attach_commands(cli, commands)
+    cli()
 
 
 if __name__ == "__main__":
-    pass
+    main()

@@ -3,34 +3,22 @@ import sys
 import shutil
 
 from dataclasses import dataclass
-
 from stat import S_ISFIFO
-from itertools import chain
 from shutil import copy2, SameFileError
-
 from functools import singledispatch
-
+import inspect
+import importlib.util
 from inspect import getouterframes
 from inspect import currentframe
-
 from pathlib import Path
-
 from urllib.parse import ParseResult
-
 from collections.abc import Iterable
 
 import click
-from rich import print
 
 from wallsy import image_handler
-
-from wallsy.config import WallsyConfig
-from wallsy.config import load_config
-
-from wallsy.console import describe
-from wallsy.console import warn
-from wallsy.console import fail
-from wallsy.console import confirm_success
+from wallsy.config import *
+from wallsy.cli_utils.console import *
 
 
 class WallsyLoadError(Exception):
@@ -185,6 +173,56 @@ def get_caller_func_name(index=2) -> str:
 
     finally:
         del frame
+
+
+def import_commands(
+    module_paths: Iterable = Path().rglob("**/subcommands/**/*.py"),
+) -> list[click.Command]:
+    """
+    Retrieve a set of click Commands from module_paths. Default directory is the built in subcommands
+    directory for commands that come pre-installed with Wallsy.
+    """
+
+    commands = []
+
+    for path in module_paths:
+        name = inspect.getmodulename(path)
+        if name != "__init__":
+
+            # Recipe for loading and executing modules from given filepath
+            # comes from importlib docs:
+            # https://docs.python.org/3/library/importlib.html#importing-a-source-file-directly
+
+            spec = importlib.util.spec_from_file_location(name, path)
+            module = importlib.util.module_from_spec(spec)
+            sys.modules[name] = module
+            spec.loader.exec_module(module)
+
+            """
+            a valid Wallsy command should define a "cli" function that is wrapped as
+            a click command. This function will be exposed as a command to the end user.
+            set the 'name' keyword argument in the @click.command decorator to set the 
+            name of the command intended for the end user.
+            """
+
+            try:
+                cli = getattr(module, "cli")
+                commands.append(cli)
+
+            except AttributeError:
+                warn(f"Cannot add command {name}: no 'cli' function found.")
+
+    return commands
+
+
+def attach_commands(group: click.Group, commands: list[click.Command]):
+    """
+    Attach a provided list of click Command objects to a provided group. Useful when
+    retrieving a dynamic list of subcommands with import_commands().
+    """
+
+    for command in commands:
+        group.add_command(command)
 
 
 @cli.command()

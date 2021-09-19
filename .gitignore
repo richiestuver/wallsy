@@ -6,3 +6,4 @@ __pycache__/
 .coverage
 *.egg-info/
 wallsy/notes.md
+notes.md
