@@ -1,3 +1,10 @@
+"""
+wallsy show
+
+This module defines the 'show' subcommand which displays images in the input stream by 
+launching the default image viewer defined by the OS. 
+"""
+
 from pathlib import Path
 
 import click

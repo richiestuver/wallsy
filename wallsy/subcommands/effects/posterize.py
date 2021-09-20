@@ -1,3 +1,10 @@
+"""
+wallsy posterize
+
+This module defines the 'posterize' subcommand which uses color quantization to reduce the number
+of colors in the image and create a poster-like effect to images in the input stream.
+"""
+
 from pathlib import Path
 
 import click

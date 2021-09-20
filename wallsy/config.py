@@ -1,5 +1,5 @@
 """
-Wallsy Configuration Management
+wallsy Configuration Management
 
 This file handles utitilities related to generating and loading variables from a configuration file.
 WallsyConfig should be loaded at startup in some kind of initialization procedure performed before 

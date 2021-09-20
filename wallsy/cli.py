@@ -1,11 +1,17 @@
 """
-wallsy - update Gnome background wallpaper with beautiful Unsplash photos
+wallsy 
 
-wallsy allows users to refresh their wallpaper with random photos from Unsplash
-that can be filtered by curated topics. Users can also schedule wallpapers
-to auto update on a recurring interval. 
+Create beautiful images, effects, and desktop wallpapers through composable edits on the command line.
 
-This module controls command line "routes" for interacting with the application.
+This module defines the entry point to the wallsy CLI. It defines a 'cli' command group which 
+collects input streams from standard input as well as any provided global options. 
+
+A callback processor is passed a list of callbacks for each of the subcommands that are invoked. Each
+callback accepts an input stream and wraps the stream in a new generator that, when later accessed, yields values from 
+the input stream after having been processed by some image processing function defined internally.
+
+After all of the callbacks have executed, we are left with a final "stream" generator-in-generator
+that can be iterated over to trigger the image processing functions in succession. 
 """
 
 from pathlib import Path
@@ -22,14 +28,6 @@ from wallsy.cli_utils.utils import *
 from wallsy.cli_utils.console import *
 
 from wallsy.WallsyStream import WallsyStream
-
-
-"""
-Wallsy CLI
-
-This module contains the Wallsy CLI app specification and command callback function definitions.
-
-"""
 
 
 @click.group(
@@ -69,9 +67,7 @@ This module contains the Wallsy CLI app specification and command callback funct
     help="Silence all output printed to the stdout or the terminal.",
 )
 @click.version_option()  # reads version from setup.cfg metadata
-def cli(
-    ctx: click.Context, files, urls, verbosity
-):  # named cli by convention in the click docs
+def cli(ctx: click.Context, files, urls, verbosity):
     """
     Wallsy
 

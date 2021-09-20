@@ -1,6 +1,9 @@
 """
-console.py - provide application level access to a Rich Console object for
-handling writing to stdout and stderr. 
+wallsy console utilities
+
+This module provides application-wide access to a Rich Console object for
+handling writing to stdout and stderr. Themes are defined and may be more deeply
+integrated into console output in future versions of wallsy.
 """
 
 from sys import exit
@@ -64,12 +67,4 @@ def log(msg: str):
     Format msg and print to stdout or log file (default: stdout)
     """
 
-    pass
-
-
-if __name__ == "__main__":
-
-    warn("this is a test warning.")
-    fail("this is a total failure.")
-    confirm_success("this one works")
-    describe("this is a description")
+    raise NotImplementedError

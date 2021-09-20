@@ -13,7 +13,6 @@ client is redirected to an image resource.
 from urllib.parse import quote_plus
 from functools import wraps
 from inspect import signature
-from collections import namedtuple
 
 
 def base_url(func):

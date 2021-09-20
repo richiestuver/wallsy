@@ -1,5 +1,5 @@
 """
-Wallsy Decorators
+wallsy Decorators
 
 Use these decorators for converting simple functions that perform image manipulations
 or other common operations into properly formed Wallsy subcommands. In general a candidate function
@@ -79,22 +79,6 @@ def make_generator(func):
 
         stream.stream = (func(file, *args, **kwargs) for file in stream.stream)
         return stream
-
-    return wrapper
-
-
-def make_cycle(func):
-    """
-    Transform the input stream from a generator that is exhausted into a
-    cycle that repeats itself when exhausted ad infinitum.
-    """
-
-    @wraps(func)
-    def wrapper(input_stream, *args, **kwargs):
-        def inner():
-            yield func(input_stream, *args, **kwargs)
-
-        yield from cycle(chain(input_stream, inner()))
 
     return wrapper
 

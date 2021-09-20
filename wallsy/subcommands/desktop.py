@@ -1,5 +1,8 @@
 """
-Desktop Commands
+wallsy desktop 
+
+This module defines the "desktop" command which provides access to either get or set the user's current 
+desktop wallpaper for use in the image processing pipeline.
 """
 
 from pathlib import Path

@@ -1,3 +1,11 @@
+"""
+wallsy random
+
+This module defines the 'random' subcommand, which permits the user to grab a random image either from 
+a local directory or online (source: Unsplash).
+"""
+
+
 from random import sample
 from urllib.parse import urlparse
 

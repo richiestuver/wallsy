@@ -1,3 +1,9 @@
+"""
+wallsy noir
+
+This module defines the 'noir' subcommand which add a greyscale effect to images in the input stream.
+"""
+
 from pathlib import Path
 
 import click

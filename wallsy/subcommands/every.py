@@ -1,9 +1,17 @@
+"""
+wallsy every
+
+This module defines the "every" command, which allows the user to schedule the inputted
+sequence of subcommands on a repeating interval. The most common use case is to update
+the desktop wallpaper on a regular period (e.g. every hour) but other creative use cases exist.
+"""
+
 from time import sleep
 
 import click
 
 from wallsy.WallsyStream import WallsyStream
-from wallsy.cli_utils.console import *
+from wallsy.cli_utils.console import describe
 
 
 @click.command(name="every")
@@ -14,7 +22,7 @@ def cli(interval):
     # custom callback generator function that passes through the OG file after an interval delay
     def wrapper(stream: WallsyStream):
         def _repeat(file):
-            describe(f"sleeping {interval}s...")
+            describe(f"Waiting {interval}s for next action...")
             sleep(interval)
             return file
 

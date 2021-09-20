@@ -1,3 +1,9 @@
+"""
+wallsy blur
+
+This module defines the 'blur' subcommand which adds a blur effect to images in the input stream.
+"""
+
 from pathlib import Path
 
 import click

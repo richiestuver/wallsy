@@ -1,15 +1,20 @@
+"""
+wallsy CLI Utilities
+
+This module contains utilities for working across Click subcommands and operations on common 
+I/O data for those commands, such as: getting filepaths from standard input, retrieving and saving filepaths or urls, and importing subcommands
+from directories.
+"""
+
+
 import os
 import sys
 import shutil
 import inspect
 import importlib.util
 
-from dataclasses import dataclass
 from stat import S_ISFIFO
-from shutil import copy2, SameFileError
 from functools import singledispatch
-from inspect import getouterframes
-from inspect import currentframe
 from pathlib import Path
 from urllib.parse import ParseResult
 from collections.abc import Iterable
@@ -47,14 +52,22 @@ def yield_stdin():
 
 @singledispatch
 def load(file) -> Path:
+    """
+    Load a file or url for use by additional subcommands in the wallsy image pipeline. Note that urls must be
+    passed by providing the result of urllib.parse.urlparse(url). Files should be passed as pathlib.Path objects.
+    """
+
     raise Exception(
         f"load was called incorrectly with argument: {file} of type f{type(file)}"
     )
 
 
 @load.register
-def load_url(url: ParseResult) -> Path:
-    """ """
+def _load_url(url: ParseResult) -> Path:
+    """
+    Private. This function is called when 'load' dispatcher receives the result of a urllib.parse.urlparse()
+    call as its first argument.
+    """
 
     dest_path = config.WALLSY_MEDIA_DIR
 
@@ -94,8 +107,10 @@ def load_url(url: ParseResult) -> Path:
 
 
 @load.register
-def load_file(file: Path) -> Path:
-    """ """
+def _load_file(file: Path) -> Path:
+    """
+    Private. This function is called when the 'load' dispatcher receives a Path object as its first argument.
+    """
 
     dest_path = config.WALLSY_MEDIA_DIR
 
@@ -113,11 +128,11 @@ def load_file(file: Path) -> Path:
     # copy the file contents to destination
     try:
         # Note that copy2 attempts to preserve metedata, other copy funcs in shutil do not
-        copy2(file, dest_path)
+        shutil.copy2(file, dest_path)
         confirm_success(
             f":floppy_disk-emoji: '{get_caller_func_name()}' saved '{dest_path.name}' to {dest_path.parent}"
         )
-    except SameFileError:
+    except shutil.SameFileError:
         warn(f"'{file.name}' is already located at {dest_path.parent}")
 
     # if we get this far, we should have a validated image. make the path available to other
@@ -134,7 +149,7 @@ def get_caller_func_name(index=2) -> str:
     """
 
     try:
-        frame = currentframe()
+        frame = inspect.currentframe()
 
     except Exception as error:
         raise UserWarning(
@@ -147,7 +162,7 @@ def get_caller_func_name(index=2) -> str:
         the 1st index is the caller of get_caller_func,
         and 2nd index is the caller of the caller (presumably the name of the function you want)
         """
-        return getouterframes(frame)[index].function
+        return inspect.getouterframes(frame)[index].function
 
     # according to the inspect module docs, it's important to cleanup references to frame objects
     # after they are done being used due to hanging around in memory afterward.
@@ -162,6 +177,13 @@ def import_commands(
     """
     Retrieve a set of click Commands from module_paths. Default directory is the built in subcommands
     directory for commands that come pre-installed with Wallsy.
+
+
+    A valid wallsy command should define a "cli" function that is wrapped as
+    a click Command object. This function will be exposed as a command to the end user.
+    Set the 'name' keyword argument in the @click.command decorator to set the
+    name of the command intended for the end user.
+
     """
 
     commands = []
@@ -179,13 +201,6 @@ def import_commands(
             sys.modules[name] = module
             spec.loader.exec_module(module)
 
-            """
-            a valid Wallsy command should define a "cli" function that is wrapped as
-            a click command. This function will be exposed as a command to the end user.
-            set the 'name' keyword argument in the @click.command decorator to set the 
-            name of the command intended for the end user.
-            """
-
             try:
                 cli = getattr(module, "cli")
                 commands.append(cli)
@@ -198,7 +213,7 @@ def import_commands(
 
 def attach_commands(group: click.Group, commands: list[click.Command]):
     """
-    Attach a provided list of click Command objects to a provided group. Useful when
+    Attach each command in a list of click Command objects to a provided group. Useful when
     retrieving a dynamic list of subcommands with import_commands().
     """
 
