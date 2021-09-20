@@ -1,4 +1,0 @@
-[run]
-omit = 
-    */tests/*  # omit all tests from coverage
-    /.venv/*  # omit venv from coverage
