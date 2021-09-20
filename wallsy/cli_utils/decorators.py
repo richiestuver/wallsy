@@ -45,7 +45,7 @@ from functools import wraps
 from functools import partial
 from inspect import getcallargs
 
-from wallsy.cli_utils.utils import WallsyData
+from wallsy.WallsyStream import WallsyStream
 from wallsy.cli_utils.console import fail
 
 
@@ -57,7 +57,7 @@ def extend_stream(func):
     """
 
     @wraps(func)
-    def wrapper(stream: WallsyData, *args, **kwargs):
+    def wrapper(stream: WallsyStream, *args, **kwargs):
         @wraps(func)
         def inner():
             return (file for file in func(*args, **kwargs))
@@ -75,7 +75,7 @@ def make_generator(func):
     """
 
     @wraps(func)
-    def wrapper(stream: WallsyData, *args, **kwargs):
+    def wrapper(stream: WallsyStream, *args, **kwargs):
 
         stream.stream = (func(file, *args, **kwargs) for file in stream.stream)
         return stream

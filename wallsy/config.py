@@ -132,7 +132,7 @@ def init() -> WallsyConfig:
         except WallsyConfigError as error:
 
             raise WallsyConfigError(
-                f"There was an issue trying to startup wallsy: {error}"
+                f"There was an issue trying to load config file for wallsy: {error}"
             )
 
     return config
@@ -167,3 +167,6 @@ def load_config() -> WallsyConfig:
         raise WallsyConfigError(f"There was an issue opening the config: {error}")
 
     return config
+
+
+config = init()

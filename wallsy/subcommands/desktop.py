@@ -11,6 +11,8 @@ import click
 
 from wallsy import wallpaper_handler
 
+from wallsy.WallsyStream import WallsyStream
+from wallsy.config import config
 from wallsy.cli_utils.console import *
 from wallsy.cli_utils.decorators import *
 from wallsy.cli_utils.utils import *
@@ -18,7 +20,7 @@ from wallsy.cli_utils.utils import *
 
 @click.command(name="desktop")
 @make_callback
-def cli(stream: WallsyData):
+def cli(stream: WallsyStream):
     """
     Set your desktop background or use your current desktop as a source image.
     """
@@ -60,7 +62,6 @@ def cli(stream: WallsyData):
 
         file = None
 
-        # if
         try:
             while file := next(stream):
                 yield _desktop(file)
@@ -89,15 +90,12 @@ def _desktop(arg):
 
 
 @_desktop.register(Path)
-@click.pass_obj
-def _set_desktop(obj, file: Path):
+def _set_desktop(file: Path):
     """
     Called by _desktop dispatcher to set the desktop wallpaper.
     """
 
-    print(f"set desktop was called")
-
-    wallpaper_dir = obj.config.WALLSY_WALLPAPER_DIR
+    wallpaper_dir = config.WALLSY_WALLPAPER_DIR
 
     if not Path(wallpaper_dir / file.name).exists():
 
@@ -127,8 +125,6 @@ def _get_desktop(*args):
     """
 
     file = wallpaper_handler.get_current_wallpaper()
-    print(file)
-
     describe(
         f":desktop_computer-emoji: 'desktop' retrieved current background '{file}'"
     )

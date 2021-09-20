@@ -2,7 +2,7 @@ from time import sleep
 
 import click
 
-from wallsy.cli_utils.utils import WallsyData
+from wallsy.WallsyStream import WallsyStream
 from wallsy.cli_utils.console import *
 
 
@@ -12,7 +12,7 @@ def cli(interval):
     """Set wallsy to repeat this action on an interval"""
 
     # custom callback generator function that passes through the OG file after an interval delay
-    def wrapper(stream: WallsyData):
+    def wrapper(stream: WallsyStream):
         def _repeat(file):
             describe(f"sleeping {interval}s...")
             sleep(interval)

@@ -1,19 +1,19 @@
 from pathlib import Path
 
+import click
+
 from wallsy import image_handler
+from wallsy.config import config
 from wallsy.cli_utils.decorators import *
 from wallsy.cli_utils.console import *
-
-import click
 
 
 @click.command(name="noir")
 @make_callback
 @make_generator
 @catch_errors
-@click.pass_obj
 @require_file
-def cli(obj, file):
+def cli(file):
     """Apply a noir effect to the image. Currently this only converts image to greyscale. May add
     additional enhancements (e.g. increase contrast) in the future.
     """
@@ -22,7 +22,7 @@ def cli(obj, file):
     file = image_handler.greyscale(
         img_path=file,
         path_modifier="noir",
-        dest_path=Path(obj.config.WALLSY_EFFECTS_DIR) / file.name,
+        dest_path=Path(config.WALLSY_EFFECTS_DIR) / file.name,
     )
 
     confirm_success(

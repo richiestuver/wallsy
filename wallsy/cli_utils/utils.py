@@ -1,13 +1,13 @@
 import os
 import sys
 import shutil
+import inspect
+import importlib.util
 
 from dataclasses import dataclass
 from stat import S_ISFIFO
 from shutil import copy2, SameFileError
 from functools import singledispatch
-import inspect
-import importlib.util
 from inspect import getouterframes
 from inspect import currentframe
 from pathlib import Path
@@ -17,30 +17,13 @@ from collections.abc import Iterable
 import click
 
 from wallsy import image_handler
-from wallsy.config import *
+from wallsy.config import config
 from wallsy.cli_utils.console import *
 
 
 class WallsyLoadError(Exception):
     """Raise when loading a resource from file or URL fails."""
 
-    pass
-
-
-@dataclass
-class WallsyData:
-    """
-    Used to store application data for purpose of passing around subcommands. Currently stores the
-    existing config settings (contains common directories) and the initial input file stream.
-    """
-
-    config: WallsyConfig
-    stream: Iterable = ()  # empty iterator
-    repeat: bool = False
-
-
-@click.group()
-def cli():
     pass
 
 
@@ -73,7 +56,6 @@ def load(file) -> Path:
 def load_url(url: ParseResult) -> Path:
     """ """
 
-    config = load_config()
     dest_path = config.WALLSY_MEDIA_DIR
 
     # let's try to prevent as many obviously invalid requests from getting through
@@ -115,7 +97,6 @@ def load_url(url: ParseResult) -> Path:
 def load_file(file: Path) -> Path:
     """ """
 
-    config = load_config()
     dest_path = config.WALLSY_MEDIA_DIR
 
     # if file is not a Path, (can also be str or TextIOBuffer), convert to Path
@@ -223,11 +204,3 @@ def attach_commands(group: click.Group, commands: list[click.Command]):
 
     for command in commands:
         group.add_command(command)
-
-
-@cli.command()
-def reset():
-    """remove wallsy folders and files from the config directory as part of an uninstall"""
-
-    load_config()
-    shutil.rmtree(os.environ["WALLSY_CONFIG_DIR"])

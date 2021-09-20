@@ -4,10 +4,10 @@ import click
 
 from wallsy import image_handler
 
+from wallsy.config import config
+
 from wallsy.cli_utils.console import describe
 from wallsy.cli_utils.console import confirm_success
-
-from wallsy.cli_utils.utils import WallsyData
 
 from wallsy.cli_utils.decorators import require_file
 from wallsy.cli_utils.decorators import make_callback
@@ -25,9 +25,8 @@ from wallsy.cli_utils.decorators import catch_errors
 @make_callback
 @make_generator
 @catch_errors
-@click.pass_obj
 @require_file
-def cli(obj: WallsyData, file: Path, radius):
+def cli(file: Path, radius):
     """
     Apply a Gaussian blur effect to image. Default pixel radius for blur is 5.
 
@@ -41,7 +40,7 @@ def cli(obj: WallsyData, file: Path, radius):
     file = image_handler.blur(
         file,
         radius=int(radius),
-        dest_path=Path(obj.config.WALLSY_EFFECTS_DIR) / file.name,
+        dest_path=Path(config.WALLSY_EFFECTS_DIR) / file.name,
     )
 
     confirm_success(

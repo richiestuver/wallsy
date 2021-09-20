@@ -15,12 +15,13 @@ from itertools import chain
 
 import click
 
+from wallsy.config import config
+
 from wallsy.cli_utils.decorators import *
 from wallsy.cli_utils.utils import *
 from wallsy.cli_utils.console import *
 
-from wallsy.config import WallsyConfig
-from wallsy.config import init
+from wallsy.WallsyStream import WallsyStream
 
 
 """
@@ -190,8 +191,7 @@ def cli(
     # Initialize the wallsy app by loading variables from a config file. Used to customize
     # things like default directories for saving and retrieving files, effects styles etc.
 
-    config: WallsyConfig = init()
-    ctx.obj = WallsyData(config=config)
+    ctx.obj = WallsyStream()
 
     # if verbosity is set to quiet, capture all std_out and std_err to a junk stream.
     if verbosity == "quiet":
@@ -210,8 +210,8 @@ def cli(
 
 @cli.result_callback()
 @click.pass_obj
-# @catch_errors
-def process_pipeline(obj: WallsyData, callbacks, *args, **kwargs):
+@catch_errors
+def process_pipeline(obj: WallsyStream, callbacks, *args, **kwargs):
     """
     The result_callback decorator supplies this function with an argument containing all of the return values from
     the invoked subcommands, as well as all of the arguments supplied to the main group() function itself. By returning an inner function from each subcommand, we can control the order of execution
@@ -239,7 +239,7 @@ def process_pipeline(obj: WallsyData, callbacks, *args, **kwargs):
     or extending the stream by chaining an additional iterable to the generator.
     """
 
-    def process_stream(stream: WallsyData):
+    def process_stream(stream: WallsyStream):
 
         for callback in callbacks:
             stream = callback(stream)
@@ -248,7 +248,7 @@ def process_pipeline(obj: WallsyData, callbacks, *args, **kwargs):
             pass
 
     # do at least once, then bail out if no cycle
-    stream: WallsyData = obj
+    stream: WallsyStream = obj
     process_stream(stream)
 
     while stream.repeat:

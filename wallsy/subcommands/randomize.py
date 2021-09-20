@@ -4,13 +4,11 @@ from urllib.parse import urlparse
 import click
 
 from wallsy.cli_utils.utils import load
-from wallsy.cli_utils.utils import WallsyData
-
+from wallsy.config import config
 from wallsy.cli_utils.decorators import make_callback
 from wallsy.cli_utils.decorators import extend_stream
 from wallsy.cli_utils.decorators import catch_errors
 
-from wallsy.cli_utils.console import describe
 from wallsy.cli_utils.console import confirm_success
 
 from wallsy import unsplash_handler
@@ -47,8 +45,7 @@ from wallsy import unsplash_handler
 @make_callback
 @extend_stream
 @catch_errors
-@click.pass_obj
-def cli(obj: WallsyData, keyword, dimensions, local, count):
+def cli(keyword, dimensions, local, count):
     """
     Generate a random image from source (default: Unsplash).
     """
@@ -69,10 +66,10 @@ def cli(obj: WallsyData, keyword, dimensions, local, count):
 
         if local:
 
-            img_set = list(obj.config.WALLSY_MEDIA_DIR.iterdir())
+            img_set = list(config.WALLSY_MEDIA_DIR.iterdir())
             file = sample(img_set, 1)[0].resolve()
             confirm_success(
-                f":game_die-emoji: 'random' grabbed '{file.name}' from {obj.config.WALLSY_MEDIA_DIR}"
+                f":game_die-emoji: 'random' grabbed '{file.name}' from {config.WALLSY_MEDIA_DIR}"
             )
 
         else:
