@@ -119,6 +119,7 @@ def test_download_image_success(
 
         mock_get.return_value = mock_response
         mock_response.content = img.read()
+        mock_response.url = img_url
 
         download_image(img_url, file_path=file_path)
 
@@ -153,6 +154,7 @@ def test_download_image_new_directory(
 
         mock_get.return_value = mock_response
         mock_response.content = img.read()
+        mock_response.url = img_url
 
         download_image(img_url, file_path=file_path)
 
@@ -184,6 +186,7 @@ def test_download_image_size_not_zero(
     with open(test_image, "rb") as img:
         mock_get.return_value = mock_response
         mock_response.content = img.read()
+        mock_response.url = img_url
 
         download_image(img_url, file_path=file_path)
 
