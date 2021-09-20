@@ -81,11 +81,13 @@ from requests import HTTPError
 from requests.exceptions import RequestException
 from gi.repository import Gio  # see PyObject API
 
+import wallsy.image_handler
+
 # following entities are tested in this module:
-from image_handler import download_image
-from image_handler import validate_image
-from image_handler import ImageDownloadError
-from image_handler import InvalidImageError
+from wallsy.image_handler import download_image
+from wallsy.image_handler import validate_image
+from wallsy.image_handler import ImageDownloadError
+from wallsy.image_handler import InvalidImageError
 
 
 @pytest.mark.parametrize(
@@ -97,8 +99,8 @@ from image_handler import InvalidImageError
         "https://images.unsplash.com/photo-1558328511-7d6490908755",
     ],
 )
-@unittest.mock.patch("image_handler.requests.models.Response", autospec=True)
-@unittest.mock.patch("image_handler.requests.get", autospec=True)
+@unittest.mock.patch("wallsy.image_handler.requests.models.Response", autospec=True)
+@unittest.mock.patch("wallsy.image_handler.requests.get", autospec=True)
 def test_download_image_success(
     mock_get,
     mock_response,
@@ -135,8 +137,8 @@ def test_download_image_success(
         "https://images.unsplash.com/photo-1558328511-7d6490908755",
     ],
 )
-@unittest.mock.patch("image_handler.requests.models.Response", autospec=True)
-@unittest.mock.patch("image_handler.requests.get", autospec=True)
+@unittest.mock.patch("wallsy.image_handler.requests.models.Response", autospec=True)
+@unittest.mock.patch("wallsy.image_handler.requests.get", autospec=True)
 def test_download_image_new_directory(
     mock_get, mock_response, tmp_path, test_image, img_url: str
 ):
@@ -170,8 +172,8 @@ def test_download_image_new_directory(
         "https://images.unsplash.com/photo-1558328511-7d6490908755",
     ],
 )
-@unittest.mock.patch("image_handler.requests.models.Response", autospec=True)
-@unittest.mock.patch("image_handler.requests.get", autospec=True)
+@unittest.mock.patch("wallsy.image_handler.requests.models.Response", autospec=True)
+@unittest.mock.patch("wallsy.image_handler.requests.get", autospec=True)
 def test_download_image_size_not_zero(
     mock_get, mock_response, tmp_path, test_image, img_url: str
 ):
@@ -200,8 +202,8 @@ def test_download_image_size_not_zero(
         "https://raw.githubusercontent.com/richiestuver/wallsy/master/README.md",
     ],
 )
-@unittest.mock.patch("image_handler.requests.models.Response", autospec=True)
-@unittest.mock.patch("image_handler.requests.get", autospec=True)
+@unittest.mock.patch("wallsy.image_handler.requests.models.Response", autospec=True)
+@unittest.mock.patch("wallsy.image_handler.requests.get", autospec=True)
 def test_download_image_bad_response(
     mock_get, mock_response, tmp_path, test_image, img_url: str
 ):
@@ -227,7 +229,7 @@ def test_download_image_bad_response(
 @pytest.mark.parametrize(
     "img_url", ["not-an-url", "www.missingschema.com", "https://hello.notaTLD"]
 )
-@unittest.mock.patch("image_handler.requests.get", autospec=True)
+@unittest.mock.patch("wallsy.image_handler.requests.get", autospec=True)
 def test_download_image_bad_request(mock_get, tmp_path, test_image, img_url):
     """
     Verify that improper requests have errors handled correctly. The Requests library will
@@ -250,8 +252,8 @@ def test_download_image_bad_request(mock_get, tmp_path, test_image, img_url):
         "https://images.unsplash.com/photo-1473081556163-2a17de81fc97",
     ],
 )
-@unittest.mock.patch("image_handler.requests.models.Response", autospec=True)
-@unittest.mock.patch("image_handler.requests.get", autospec=True)
+@unittest.mock.patch("wallsy.image_handler.requests.models.Response", autospec=True)
+@unittest.mock.patch("wallsy.image_handler.requests.get", autospec=True)
 def test_download_image_file_exists_failure(
     mock_get, mock_response, tmp_path, test_image, img_url: str
 ):

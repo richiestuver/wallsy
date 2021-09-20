@@ -22,8 +22,8 @@ import pytest
 from gi.repository import Gio  # see PyObject API
 
 # following entities are tested in this module:
-from wallpaper_handler import update_wallpaper
-from wallpaper_handler import WallpaperUpdateError
+from wallsy.wallpaper_handler import update_wallpaper
+from wallsy.wallpaper_handler import WallpaperUpdateError
 
 
 @pytest.fixture
