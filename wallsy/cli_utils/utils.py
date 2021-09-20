@@ -21,7 +21,7 @@ from collections.abc import Iterable
 
 import click
 
-import wallsy.cli_utils
+import wallsy
 
 from wallsy import image_handler
 from wallsy.config import config
