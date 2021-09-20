@@ -21,6 +21,8 @@ from collections.abc import Iterable
 
 import click
 
+import wallsy.cli_utils
+
 from wallsy import image_handler
 from wallsy.config import config
 from wallsy.cli_utils.console import *
@@ -172,7 +174,9 @@ def get_caller_func_name(index=2) -> str:
 
 
 def import_commands(
-    module_paths: Iterable = Path().rglob("**/subcommands/**/*.py"),
+    module_paths: Iterable = Path(wallsy.__file__).parent.rglob(
+        "**/subcommands/**/*.py"
+    ),
 ) -> list[click.Command]:
     """
     Retrieve a set of click Commands from module_paths. Default directory is the built in subcommands
