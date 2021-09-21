@@ -15,8 +15,8 @@ from wallsy.cli_utils.console import *
 
 
 @click.command(name="noir")
-@make_callback
-@make_generator
+@callback
+@generator
 @catch_errors
 @require_file
 def cli(file):

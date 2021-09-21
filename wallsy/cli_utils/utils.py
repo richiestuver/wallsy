@@ -48,7 +48,6 @@ def yield_stdin():
             yield Path(line.strip()).expanduser().resolve()
 
     else:
-        warn("no pipeline detected for standard input")
         return
 
 

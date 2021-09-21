@@ -21,8 +21,8 @@ from wallsy.cli_utils.console import *
     show_default=True,
     help="Specify the number of colors to reduce the image to (range 1-255)",
 )
-@make_callback
-@make_generator
+@callback
+@generator
 @catch_errors
 @require_file
 def cli(file: Path, colors: int):

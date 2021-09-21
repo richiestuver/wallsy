@@ -22,7 +22,7 @@ from wallsy.cli_utils.utils import *
 
 
 @click.command(name="desktop")
-@make_callback
+@callback
 def cli(stream: WallsyStream):
     """
     Set your desktop background or use your current desktop as a source image.

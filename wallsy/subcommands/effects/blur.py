@@ -16,8 +16,8 @@ from wallsy.cli_utils.console import describe
 from wallsy.cli_utils.console import confirm_success
 
 from wallsy.cli_utils.decorators import require_file
-from wallsy.cli_utils.decorators import make_callback
-from wallsy.cli_utils.decorators import make_generator
+from wallsy.cli_utils.decorators import callback
+from wallsy.cli_utils.decorators import generator
 from wallsy.cli_utils.decorators import catch_errors
 
 
@@ -28,8 +28,8 @@ from wallsy.cli_utils.decorators import catch_errors
     show_default=True,
     help="Specify the pixel radius for blur effect.",
 )  # note that click options are passed to the decorated command as keyword arguments. so should be specified after positional in the signature
-@make_callback
-@make_generator
+@callback
+@generator
 @catch_errors
 @require_file
 def cli(file: Path, radius):

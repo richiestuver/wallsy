@@ -13,8 +13,8 @@ from wallsy.cli_utils.decorators import *
 
 
 @click.command(name="show")
-@make_callback
-@make_generator
+@callback
+@generator
 @catch_errors
 @require_file
 def cli(file: Path):

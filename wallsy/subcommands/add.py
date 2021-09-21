@@ -3,8 +3,8 @@ from urllib.parse import urlparse
 
 from wallsy.cli_utils.utils import load
 
-from wallsy.cli_utils.decorators import make_callback
-from wallsy.cli_utils.decorators import extend_stream
+from wallsy.cli_utils.decorators import callback
+from wallsy.cli_utils.decorators import stream
 from wallsy.cli_utils.decorators import catch_errors
 
 import click
@@ -22,8 +22,8 @@ import click
     multiple=True,
 )
 @click.option("--url", "-u", "urls", type=str, multiple=True)
-@make_callback
-@extend_stream
+@callback
+@stream
 @catch_errors
 def cli(files: list[Path] = None, urls: list[str] = None):
     """

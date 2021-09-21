@@ -49,7 +49,7 @@ from wallsy.WallsyStream import WallsyStream
 from wallsy.cli_utils.console import fail
 
 
-def extend_stream(func):
+def stream(func):
     """
     Take a function that generates output(s) (or passes through new input(s) directly as an output)
     and extend an existing stream to include these new outputs. This allows functions that don't operate
@@ -68,7 +68,7 @@ def extend_stream(func):
     return wrapper
 
 
-def make_generator(func):
+def generator(func):
     """
     Take a function that accepts and returns a single input parameter and convert it into
     a function that accepts an input stream and yields the return value of the original function.
@@ -83,7 +83,7 @@ def make_generator(func):
     return wrapper
 
 
-def make_callback(func):
+def callback(func):
     """
     Receive a function (presumably, that does not itself return a function) and convert it into a new function that returns the
     original function as a callback function.
@@ -113,7 +113,7 @@ def make_callback(func):
     """
 
     @wraps(func)
-    def callback(*args, **kwargs):
+    def _callback(*args, **kwargs):
         @wraps(func)
         def wrapper(*fargs, **fkwargs):
             new_func = partial(func, *args, **kwargs)
@@ -121,7 +121,7 @@ def make_callback(func):
 
         return wrapper
 
-    return callback
+    return _callback
 
 
 def require_file(func):

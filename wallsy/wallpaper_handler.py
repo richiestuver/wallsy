@@ -63,7 +63,7 @@ def set_wallpaper_location(file_path: str = "~/.local/share/backgrounds"):
     # store path in environment variable
 
 
-def update_wallpaper(img_path: str, options=None) -> None:
+def update_wallpaper(img_path: Path, options=None) -> None:
     """
     Update the background image to the one specified by file_path. Raise BackgroundUpdateError if issues encountered
     during attempt to update background.

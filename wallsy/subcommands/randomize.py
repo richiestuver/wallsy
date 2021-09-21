@@ -13,8 +13,8 @@ import click
 
 from wallsy.cli_utils.utils import load
 from wallsy.config import config
-from wallsy.cli_utils.decorators import make_callback
-from wallsy.cli_utils.decorators import extend_stream
+from wallsy.cli_utils.decorators import callback
+from wallsy.cli_utils.decorators import stream
 from wallsy.cli_utils.decorators import catch_errors
 
 from wallsy.cli_utils.console import confirm_success
@@ -50,8 +50,8 @@ from wallsy import unsplash_handler
     default=1,
     show_default=True,
 )
-@make_callback
-@extend_stream
+@callback
+@stream
 @catch_errors
 def cli(keyword, dimensions, local, count):
     """
