@@ -24,7 +24,7 @@ from wallsy.cli_utils.decorators import catch_errors
 @click.command(name="colorize")
 @click.option(
     "--dark",
-    default=("DarkRed"),
+    default=("midnightblue"),
     help="Speficy a color name or RGB value to replace dark areas with.",
 )
 @click.option(
