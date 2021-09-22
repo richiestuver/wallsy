@@ -84,7 +84,7 @@ def _load_url(url: ParseResult) -> Path:
 
     file_name = Path(url.path).name
     describe(
-        f":earth_asia-emoji: '{get_caller_func_name()}' getting image from {url.geturl()} ...",
+        f":earth_asia-emoji: getting image from {url.geturl()} ...",
         end=" ",
     )
     try:
@@ -102,7 +102,7 @@ def _load_url(url: ParseResult) -> Path:
     # subcommands by storing in the click context's object attribute (which is designed for this purpose)
 
     confirm_success(
-        f":white_check_mark-emoji: \n:floppy_disk: '{get_caller_func_name()}' saved '{dest_path.name}' to {dest_path.parent}"
+        f":white_check_mark-emoji: \n:floppy_disk: saved '{dest_path.name}' to {dest_path.parent}"
     )
     return dest_path
 
