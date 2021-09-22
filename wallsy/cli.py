@@ -206,7 +206,7 @@ def cli(ctx: click.Context, files, urls, verbosity):
 
 @cli.result_callback()
 @click.pass_obj
-@catch_errors
+# @catch_errors
 def process_pipeline(obj: WallsyStream, callbacks, *args, **kwargs):
     """
     The result_callback decorator supplies this function with an argument containing all of the return values from

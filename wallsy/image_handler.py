@@ -17,8 +17,9 @@ but this is not intended to be a comprehensive photo manipulation program.
 from pathlib import Path
 import io
 from urllib.parse import urlparse
+from typing import Union
 
-from PIL import Image, ImageFilter, UnidentifiedImageError
+from PIL import Image, ImageFilter, ImageOps, UnidentifiedImageError
 import requests
 
 
@@ -227,5 +228,30 @@ def quantize(
         # after quantization our mode is "P" which has an alpha layer, not supported by jpg. Force to save as png.
         out = Path(f"{img_path.parent / img_path.stem}-{path_modifier}{colors}.png")
         img_quantized.save(out)
+
+        return out
+
+
+def colorize(
+    img_path: Path,
+    black_value: Union[str, tuple[int, int, int]],
+    white_value: Union[str, tuple[int, int, int]],
+    path_modifier: str = "colorize",
+) -> Path:
+
+    """
+    Wraps the PIL colorize method from the ImageOps library. Converts image to greyscale, then
+    converts black pixel values to the specified color, leaving white pixels unchanged.
+
+    Note that the PIL method allows for white color values to be changed to a new color value as well.
+    """
+
+    with Image.open(img_path) as img:
+        img_grayscale = ImageOps.grayscale(img)
+        img_colorize = ImageOps.colorize(
+            img_grayscale, black=black_value, white=white_value
+        )
+        out = img_path.parent / f"{img_path.stem}-{path_modifier}{img_path.suffix}"
+        img_colorize.save(out)
 
         return out
