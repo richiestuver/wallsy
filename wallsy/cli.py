@@ -21,11 +21,9 @@ from itertools import chain
 
 import click
 
+import wallsy.cli_utils.utils as utils
 from wallsy.config import config
-
 from wallsy.cli_utils.decorators import catch_errors
-from wallsy.cli_utils.utils import *
-from wallsy.cli_utils.console import *
 
 from wallsy.WallsyStream import WallsyStream
 
@@ -193,9 +191,9 @@ def cli(ctx: click.Context, files, urls, verbosity):
         console.file = StringIO()
 
     streams = [
-        (load(Path(file)) for file in yield_stdin() if file),
-        (load(Path(file)) for file in files),
-        (load(urlparse(url)) for url in urls),
+        (utils.load(Path(file)) for file in utils.yield_stdin() if file),
+        (utils.load(Path(file)) for file in files),
+        (utils.load(urlparse(url)) for url in urls),
     ]
 
     stream = (file for file in chain(*streams))
@@ -252,8 +250,8 @@ def process_pipeline(obj: WallsyStream, callbacks, *args, **kwargs):
 
 def main():
 
-    commands = import_commands()
-    attach_commands(cli, commands)
+    commands = utils.import_commands()
+    utils.attach_commands(cli, commands)
     cli()
 
 
