@@ -23,7 +23,7 @@ import click
 
 from wallsy.config import config
 
-from wallsy.cli_utils.decorators import *
+from wallsy.cli_utils.decorators import catch_errors
 from wallsy.cli_utils.utils import *
 from wallsy.cli_utils.console import *
 
@@ -31,9 +31,8 @@ from wallsy.WallsyStream import WallsyStream
 
 
 @click.group(
-    chain=True
+    chain=True,
 )  # default behavior is to pass --help automatically if no subcommand provided
-@catch_errors
 @click.pass_context
 @click.option(
     "--file",
@@ -206,7 +205,7 @@ def cli(ctx: click.Context, files, urls, verbosity):
 
 @cli.result_callback()
 @click.pass_obj
-# @catch_errors
+@catch_errors
 def process_pipeline(obj: WallsyStream, callbacks, *args, **kwargs):
     """
     The result_callback decorator supplies this function with an argument containing all of the return values from
