@@ -79,7 +79,6 @@ from itertools import cycle
 import pytest
 from requests import HTTPError
 from requests.exceptions import RequestException
-from gi.repository import Gio  # see PyObject API
 
 import wallsy.image_handler
 

@@ -115,8 +115,8 @@ def _load_file(file: Path) -> Path:
 
     dest_path = config.WALLSY_MEDIA_DIR
 
-    # if file is not a Path, (can also be str or TextIOBuffer), convert to Path
-    file = Path(file).expanduser().resolve()
+    if not file.is_absolute():
+        file = file.expanduser().resolve()
     dest_path = dest_path / file.name
 
     # validate that the input file is a valid image.

@@ -15,9 +15,8 @@ https://github.com/GNOME/gsettings-desktop-schemas/blob/master/schemas/org.gnome
 
 from pathlib import Path
 import imghdr  # use to determine if image is valid
-
-# see PyGObject API ref for Gio.Settings or >>> help(Gio.Settings) in REPL
-from gi.repository import Gio
+import subprocess
+from collections import OrderedDict
 
 
 class WallpaperUpdateError(Exception):
@@ -30,37 +29,38 @@ class WallpaperUpdateError(Exception):
 
 def get_current_wallpaper() -> Path:
     """
-    Retrieve the current wallpaper from the Gnome settings for desktop background. This is a wrapper
-    around the Gio.Settings API.
+    Retrieve the current wallpaper from the Gnome settings for desktop background. This is done
+    by dropping into the gsettings shell command.
     """
 
-    gnome_background_settings = Gio.Settings(schema="org.gnome.desktop.background")
+    get_desktop_background = OrderedDict(
+        [
+            ("cmd", "gsettings"),
+            ("subcmd", "get"),
+            ("schema", "org.gnome.desktop.background"),
+            ("key", "picture-uri"),
+        ]
+    )
 
-    return Path(gnome_background_settings["picture-uri"])
+    try:
 
+        process = subprocess.run(
+            list(get_desktop_background.values()),
+            capture_output=True,
+            text=True,
+            check=True,
+        )
 
-def set_wallpaper_location(file_path: str = "~/.local/share/backgrounds"):
-    """
-    Set the download and retrieval location for storing and accessing background images.
-    This function takes the supplied url path string, convert it to a Path object, and create
-    the directory if it does not already exist. Store the location in an environment variable.
+    except (OSError, subprocess.CalledProcessError) as error:
+        raise WallpaperUpdateError(f"Could not retrieve current background: {error}")
 
-    Note on default Gnome wallpaper behavior: the builtin Gnome desktop wallpaper GUI stores images that users add through the settings GUI to the directory
-    /home/{user}/.local/share/backgrounds'. Images found in this directory will show up in
-    the GUI so for management this is the ideal location to store as a default. Note that the
-    popular Gnome Tweak Tool (not the built in settings app) does NOT save images to this location.
-    """
+    # the output we get from stdout is not cleanly formatted. for encoding reasons
+    # I have not fully grasped yet. Cleanse the string by removing secret whitespace
+    # and extraneous quote chars.
 
-    # since we expect the default dir to live in user's home directory, make sure this path is resolved correctly.
-    # Expand user before making path absolute.
-    wallpaper_location = Path(file_path).expanduser().resolve()
-    if not wallpaper_location.exists():
-        try:
-            wallpaper_location.mkdir(parents=True, exist_ok=True)
-        except FileExistsError:
-            raise FileExistsError(f"Error trying to create {str(wallpaper_location)}.")
+    wallpaper: Path = Path(process.stdout.strip().removeprefix("'").removesuffix("'"))
 
-    # store path in environment variable
+    return wallpaper
 
 
 def update_wallpaper(img_path: Path, options=None) -> None:
@@ -70,28 +70,16 @@ def update_wallpaper(img_path: Path, options=None) -> None:
     """
 
     """
-    Gio Settings object provides Dict-like access to key-value pairs which in this case allow
-    us to interact with the Gnome desktop background image settings.
-    the target key for changing wallpapers is 'picture-uri' and takes a string representing
-    a full path. No errors are thrown for invalid values. Instead, background is set 
-    to not include an image. Note that this effect can be desirable for cases where
-    a gradient or color is set to the background, but note that this is not currently
-    supported by this application. 
+    check that path exists before update. if not, raise error and notify user
+    following code returns false for empty string "" and invalid rel or abs paths
+    NOTE: os.path.exists accepts integers (open file descriptors). This won't catch
+    invalid types for our purposes. Additional check should be used.
+
+    make sure to use the absolute path so resource is locatable when accessed from schema
+    XML schema is read directly, there is no path validation done by Gnome desktop
     """
 
-    gnome_background_settings = Gio.Settings(schema="org.gnome.desktop.background")
-
-    # check that path exists before update. if not, raise error and notify user
-    # following code returns false for empty string "" and invalid rel or abs paths
-    # NOTE: os.path.exists accepts integers (open file descriptors). This won't catch
-    # invalid types for our purposes. Additional check should be used.
-
-    try:
-        wallpaper_location = Path(img_path).expanduser().resolve()
-    except TypeError:
-        raise WallpaperUpdateError(
-            f"Invalid parameter: {img_path} is not a valid Pathlike object."
-        )
+    wallpaper_location = Path(img_path).expanduser().resolve()
 
     # subsequent operations will fail if path does not exist or is not a file, so catch this.
     if not wallpaper_location.exists() or not wallpaper_location.is_file():
@@ -106,6 +94,32 @@ def update_wallpaper(img_path: Path, options=None) -> None:
             f"Invalid image type provided. {wallpaper_location.name} is not a valid image."
         )
 
-    # make sure to use the absolute path so resource is locatable when accessed from schema
-    # XML schema is read directly, there is no path validation done by Gnome desktop
-    gnome_background_settings["picture-uri"] = str(wallpaper_location)
+    """
+    Drop into gsettings CLI to efficiently update the desktop background without expensive dependencies.
+    Gsettings only exists for GNOME desktop environments so in future be sure to check for platform before 
+    trying to use this command. 
+
+    subprocess.CalledProcessError is raised by the run method call if a non-zero exit status is returned. This
+    is your main way of determining if an issue has been encountered during the subprocess run. 
+    """
+
+    # ordered dict is used here for clarity and to preserve sequence for command arguments. there's
+    # probably a better structure to use but this is good for now
+    set_desktop_background = OrderedDict(
+        [
+            ("cmd", "gsettings"),
+            ("subcmd", "set"),
+            ("schema", "org.gnome.desktop.background"),
+            ("key", "picture-uri"),
+            ("value", f"{wallpaper_location}"),
+        ]
+    )
+
+    try:
+
+        subprocess.run(
+            list(set_desktop_background.values()), capture_output=True, check=True
+        )
+
+    except (OSError, subprocess.CalledProcessError) as error:
+        raise WallpaperUpdateError(f"Could not set desktop background: {error}")
