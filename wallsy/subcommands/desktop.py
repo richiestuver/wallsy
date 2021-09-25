@@ -128,9 +128,6 @@ def _get_desktop(*args):
     """
 
     file = wallpaper_handler.get_current_wallpaper()
-    describe(
-        f":desktop_computer-emoji: 'desktop' retrieved current background '{file}'"
-    )
+    describe(f":desktop_computer-emoji: 'desktop' retrieved current background {file}")
     file = load(file)
-
     return file

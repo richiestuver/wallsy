@@ -15,28 +15,36 @@ Pytest Fixtures - https://docs.pytest.org/en/6.2.x/fixture.html#fixtures
 Pytest Parametrization - https://docs.pytest.org/en/6.2.x/parametrize.html#parametrize
 """
 
+import subprocess
+from subprocess import CalledProcessError
 from pathlib import Path
-from itertools import cycle
+from unittest.mock import patch
 
 import pytest
-from gi.repository import Gio  # see PyObject API
 
 # following entities are tested in this module:
+from wallsy.wallpaper_handler import get_current_wallpaper
 from wallsy.wallpaper_handler import update_wallpaper
 from wallsy.wallpaper_handler import WallpaperUpdateError
 
 
-@pytest.fixture
-def wallpaper_settings() -> Gio.Settings:
-    """
-    Setup an object to represent the org.gnome.desktop.background schema for testing. See
-    additional details on Gio.Settings in PyGObject API reference.
-    """
+def test_get_background_success():
 
-    return Gio.Settings.new("org.gnome.desktop.background")
+    wallpaper = get_current_wallpaper()
+    assert isinstance(wallpaper, Path)
+    assert wallpaper.exists()
 
 
-def test_update_background_success(test_image, wallpaper_settings: Gio.Settings):
+@patch("wallsy.wallpaper_handler.subprocess.run", autospec=True)
+def test_get_background_failure(fake_run):
+
+    fake_run.side_effect = subprocess.CalledProcessError(cmd="gsettings", returncode=1)
+
+    with pytest.raises(WallpaperUpdateError):
+        get_current_wallpaper()
+
+
+def test_update_background_success(test_image):
     """
     Load sample images and set the background appropriately. Settings schema for org.gnome.desktop.background
     is stored in wallpaper_settings, a dict-like object provided by PyGObject to interface with GIO library.
@@ -52,8 +60,18 @@ def test_update_background_success(test_image, wallpaper_settings: Gio.Settings)
     An error should be raised and checked in another test to make sure a valid img_path file path is provided.
     """
 
-    update_wallpaper(str(test_image))
-    assert wallpaper_settings["picture-uri"] == str(test_image.resolve())
+    update_wallpaper(test_image)
+
+    wallpaper = subprocess.run(
+        "gsettings get org.gnome.desktop.background picture-uri".split(" "),
+        check=True,
+        text=True,
+        capture_output=True,
+    )
+
+    assert wallpaper.stdout.strip().removeprefix("'").removesuffix("'") == str(
+        test_image.absolute()
+    )
 
 
 @pytest.mark.parametrize(
@@ -61,8 +79,8 @@ def test_update_background_success(test_image, wallpaper_settings: Gio.Settings)
     [
         "",
         "/not/a/real/absolute/path.jpg",
-        42,
-        Path().rglob("not_an_image.txt"),
+        "42",
+        "/home/richie/Dropbox/repos/unsplash/wallsy/wallsy/tests/test_data/img/not_an_image.txt",
     ],
 )
 def test_update_background_failure(img_path):
@@ -76,4 +94,13 @@ def test_update_background_failure(img_path):
     """
 
     with pytest.raises(WallpaperUpdateError):
-        update_wallpaper(img_path)
+        update_wallpaper(Path(img_path))
+
+
+@patch("wallsy.wallpaper_handler.subprocess.run", autospec=True)
+def test_update_background_subprocess_failure(fake_run):
+
+    fake_run.side_effect = subprocess.CalledProcessError(cmd="gsettings", returncode=1)
+
+    with pytest.raises(WallpaperUpdateError):
+        get_current_wallpaper()
