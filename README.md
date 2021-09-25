@@ -47,7 +47,6 @@ An official PyPI package may be made available in the future.
 - Click
 - Pillow
 - Rich
-- PyGObject 
 - Requests
 
 ### Development Installation
