@@ -124,7 +124,46 @@ def test_download_image_success(
 
         download_image(img_url, file_path=file_path)
 
-    with open(file_path, "rb") as file:  # will raise FileNotFound error
+    with open(file_path, "rb") as file:
+        assert imghdr.what(file) is not None  # None returned for invalid files
+
+
+@pytest.mark.parametrize(
+    "img_url",
+    [
+        "https://source.unsplash.com/random",
+    ],
+)
+@unittest.mock.patch("wallsy.image_handler.requests.models.Response", autospec=True)
+@unittest.mock.patch("wallsy.image_handler.requests.get", autospec=True)
+def test_download_image_redirect(
+    mock_get,
+    mock_response,
+    tmp_path,
+    test_image,
+    img_url: str,
+):
+
+    """
+    Validate that the url stored on the response is not equal to the original url from the GET,
+    a different operation is performed to generate the save file name to make sure
+    the actual response url received is used.
+    """
+
+    # this represents an automatic redirect performed by Requests
+
+    file_path = tmp_path / os.path.basename(urlparse(img_url).path)
+
+    with open(test_image, "rb") as img:
+
+        mock_get.return_value = mock_response
+        mock_response.content = img.read()
+        mock_response.url = "https://images.unsplash.com/photo-1558328511-7d6490908755"
+
+        assert img_url is not mock_response.url
+        download_image(img_url, file_path=file_path)
+
+    with open(tmp_path / "photo-1558328511-7d6490908755.jpeg", "rb") as file:
         assert imghdr.what(file) is not None  # None returned for invalid files
 
 
@@ -161,6 +200,33 @@ def test_download_image_new_directory(
 
     with open(file_path, "rb") as file:  # will raise FileNotFound error
         assert imghdr.what(file) is not None  # None returned for invalid files
+
+
+@pytest.mark.parametrize(
+    "img_url",
+    [
+        "https://images.unsplash.com/photo-1473081556163-2a17de81fc97",
+        "https://images.unsplash.com/photo-1536431311719-398b6704d4cc",
+        "https://images.unsplash.com/photo-1558328511-7d6490908755",
+    ],
+)
+@unittest.mock.patch("wallsy.image_handler.requests.models.Response", autospec=True)
+@unittest.mock.patch("wallsy.image_handler.requests.get", autospec=True)
+def test_download_image_invalid_image(
+    mock_get, mock_response, tmp_path, test_image, img_url
+):
+
+    file_name = os.path.basename(urlparse(img_url).path)
+    file_path = tmp_path / f"{file_name}.jpg"
+
+    with open("wallsy/tests/test_data/img/also_not_an_image.txt", "rb") as img:
+
+        mock_get.return_value = mock_response
+        mock_response.content = img.read()
+        mock_response.url = img_url
+
+        with pytest.raises(ImageDownloadError):
+            download_image(img_url, file_path=file_path)
 
 
 @pytest.mark.parametrize(
@@ -274,8 +340,27 @@ def test_download_image_file_exists_failure(
         mock_get.return_value = mock_response
         mock_response.content = img.read()
 
-        with pytest.raises(FileExistsError):
+        with pytest.raises(ImageDownloadError):
             download_image(img_url, file_path)
+
+
+@pytest.mark.parametrize(
+    "img_url",
+    [
+        "https://images.unsplash.com/photo-1473081556163-2a17de81fc97",
+    ],
+)
+@unittest.mock.patch("wallsy.image_handler.requests.models.Response", autospec=True)
+@unittest.mock.patch("wallsy.image_handler.requests.get", autospec=True)
+def test_download_image_failure_is_dir(
+    mock_get, mock_response, tmp_path, test_image, img_url: str
+):
+    """
+    Verify download image catches directories that are passed as input.
+    """
+
+    with pytest.raises(ImageDownloadError):
+        download_image(img_url, tmp_path)
 
 
 def test_validate_image_success(test_image):
@@ -289,10 +374,20 @@ def test_validate_image_success(test_image):
 
 
 @pytest.mark.parametrize("txt_path", list(Path().rglob("test_data/**/*.txt")))
-def test_validate_image_failure(txt_path):
+def test_validate_image_failure_invalid_image(txt_path):
 
     """Validate that invalid binary data (e.g. text files) are correctly caught and
     raise an exception in the validate image wrapper."""
 
     with pytest.raises(InvalidImageError):
         validate_image(txt_path)
+
+
+def test_validate_image_failure_filenotfound():
+
+    """
+    Validate that validate image captures non-existent files.
+    """
+
+    with pytest.raises(InvalidImageError):
+        validate_image(Path("does_not_exist"))

@@ -60,23 +60,20 @@ def validate_image(input) -> str:
     except FileNotFoundError:
         raise InvalidImageError(f"Input {str(input)} could not be found.")
 
-    except Exception as error:
-        raise InvalidImageError(f"There was an error validating {str(input)}: {error}")
-
 
 def download_image(url: str, file_path: str) -> Path:
     """
-        Download an image at specified url. This is an API agnostic function that does not
-        take an API key for a particular service. Expectation is that resource is generally
-        accesssible.
-    .
-        Attempt to save image at target file path. If file path does not exist, it will be created.
-        Returns the location on filesystem where image was saved.
+    Download an image at specified url. This is an API agnostic function that does not
+    take an API key for a particular service. Expectation is that resource is generally
+    accesssible.
 
-        If downloading image fails for one of various reasons, will raise an appropriate error instead of
-        failing silently.
+    Attempt to save image at target file path. If file path does not exist, it will be created.
+    Returns the location on filesystem where image was saved.
 
-        If file already exists, do not overwrite.
+    If downloading image fails for one of various reasons, will raise an appropriate error instead of
+    failing silently.
+
+    If file already exists, do not overwrite.
     """
 
     destination_path = Path(file_path).expanduser().resolve()
@@ -84,17 +81,14 @@ def download_image(url: str, file_path: str) -> Path:
     # prevent overwriting an existing file. this is a design decision to prevent unintentional deletions
 
     if not destination_path.exists():
-        try:
-            destination_path.parent.mkdir(parents=True, exist_ok=True)
-        except FileExistsError:
-            raise FileExistsError(f"Error trying to create {str(destination_path)}.")
+        destination_path.parent.mkdir(parents=True, exist_ok=True)
 
     # edge case where destination path is a folder
     elif destination_path.is_dir():
-        raise IsADirectoryError(f"Destination file {destination_path} is a directory.")
+        raise ImageDownloadError(f"Destination file {destination_path} is a directory.")
 
     else:
-        raise FileExistsError(f"File already exists at {destination_path}.")
+        raise ImageDownloadError(f"File already exists at {destination_path}.")
 
     # now for the good stuff. get the raw image content and use the imaging library to save to file.
     # two main error conditions: bad http request or trying to access something that's not an image.
@@ -134,9 +128,8 @@ def download_image(url: str, file_path: str) -> Path:
             # that redirects to an actual image resource. we want the path of the actual image resource to
             # be the filename and not the generic url.
 
-            if (
-                url != r.url
-            ):  # r.url is the last effective url hit in a redirect sequence
+            # r.url is the last effective url hit in a redirect sequence
+            if url != r.url:
                 destination_path = (
                     Path(destination_path.parent) / Path(urlparse(r.url).path).name
                 )
