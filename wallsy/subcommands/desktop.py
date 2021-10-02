@@ -105,7 +105,8 @@ def _set_desktop(file: Path):
         # note: copy2 attempts to preserve file metadata. other copy functions in shutil do not do so
         copy2(file, wallpaper_dir / file.name)
         describe(
-            f":desktop_computer-emoji:  'desktop' added a copy of '{file.name}' to {wallpaper_dir}"
+            f":desktop_computer-emoji:  'desktop' added a copy of '{file.name}' to"
+            f" {wallpaper_dir}"
         )
 
     else:
@@ -113,7 +114,8 @@ def _set_desktop(file: Path):
 
     wallpaper_handler.update_wallpaper(img_path=wallpaper_dir / file.name)
     confirm_success(
-        f":white_check_mark-emoji: 'desktop' updated wallpaper to {wallpaper_dir / file.name}"
+        ":white_check_mark-emoji: 'desktop' updated wallpaper to"
+        f" {wallpaper_dir / file.name}"
     )
 
     return file

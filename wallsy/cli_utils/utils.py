@@ -102,7 +102,8 @@ def _load_url(url: ParseResult) -> Path:
     # subcommands by storing in the click context's object attribute (which is designed for this purpose)
 
     confirm_success(
-        f":white_check_mark-emoji: \n:floppy_disk: saved '{dest_path.name}' to {dest_path.parent}"
+        f":white_check_mark-emoji: \n:floppy_disk: saved '{dest_path.name}' to"
+        f" {dest_path.parent}"
     )
     return dest_path
 
@@ -131,7 +132,8 @@ def _load_file(file: Path) -> Path:
         # Note that copy2 attempts to preserve metedata, other copy funcs in shutil do not
         shutil.copy2(file, dest_path)
         confirm_success(
-            f":floppy_disk-emoji: '{get_caller_func_name()}' saved '{dest_path.name}' to {dest_path.parent}"
+            f":floppy_disk-emoji: '{get_caller_func_name()}' saved '{dest_path.name}'"
+            f" to {dest_path.parent}"
         )
     except shutil.SameFileError:
         warn(f"'{file.name}' is already located at {dest_path.parent}")
@@ -154,7 +156,8 @@ def get_caller_func_name(index=2) -> str:
 
     except Exception as error:
         raise UserWarning(
-            f"There was an error trying to find out the caller function for pretty printing a message: {error}"
+            "There was an error trying to find out the caller function for pretty"
+            f" printing a message: {error}"
         )
 
     else:

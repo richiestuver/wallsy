@@ -24,7 +24,7 @@ from wallsy.cli_utils.decorators import catch_errors
 @click.command(name="colorize")
 @click.option(
     "--dark",
-    default=("midnightblue"),
+    default="midnightblue",
     help="Speficy a color name or RGB value to replace dark areas with.",
 )
 @click.option(
@@ -44,7 +44,8 @@ def cli(file: Path, dark, light):
     """
 
     describe(
-        f":paintbrush-emoji:  'colorize' changing dark areas to {dark} and light areas to {light}..."
+        f":paintbrush-emoji:  'colorize' changing dark areas to {dark} and light areas"
+        f" to {light}..."
     )
     file = image_handler.colorize(file, dark, light)
     confirm_success(

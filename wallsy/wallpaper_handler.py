@@ -91,7 +91,8 @@ def update_wallpaper(img_path: Path, options=None) -> None:
     # See list of valid image types at https://docs.python.org/3/library/imghdr.html
     if imghdr.what(wallpaper_location) is None:
         raise WallpaperUpdateError(
-            f"Invalid image type provided. {wallpaper_location.name} is not a valid image."
+            f"Invalid image type provided. {wallpaper_location.name} is not a valid"
+            " image."
         )
 
     """

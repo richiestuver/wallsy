@@ -137,7 +137,8 @@ def require_file(func):
         func_args = getcallargs(func, *args, **kwargs)
         if func_args.get("file") is None:
             raise Exception(
-                f"Command '{func.__name__}' did not receive a filename as part of pipeline. Did you run 'add' or 'random' to source an image?"
+                f"Command '{func.__name__}' did not receive a filename as part of"
+                " pipeline. Did you run 'add' or 'random' to source an image?"
             )
         return func(*args, **kwargs)
 

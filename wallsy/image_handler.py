@@ -125,7 +125,8 @@ def download_image(url: str, file_path: str) -> Path:
         r.raise_for_status()
     except requests.exceptions.HTTPError:
         raise ImageDownloadError(
-            f"Download error: something went wrong trying to access {url} (status code {r.status_code})"
+            f"Download error: something went wrong trying to access {url} (status code"
+            f" {r.status_code})"
         )
 
     # successful request but did not get back image data as the response.
@@ -150,7 +151,8 @@ def download_image(url: str, file_path: str) -> Path:
 
     except UnidentifiedImageError:
         raise ImageDownloadError(
-            f"Download error: the target resource at {url} does not appear to be an image."
+            f"Download error: the target resource at {url} does not appear to be an"
+            " image."
         )
 
     return destination_path

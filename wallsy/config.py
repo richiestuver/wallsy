@@ -90,7 +90,8 @@ class WallsyConfig:
 
         except TypeError as error:
             raise WallsyConfigError(
-                f"There was an error trying to write serialize config data to JSON: {error}"
+                "There was an error trying to write serialize config data to JSON:"
+                f" {error}"
             )
 
         # make sure that directory structure exists, but we don't care

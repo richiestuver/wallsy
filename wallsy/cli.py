@@ -40,7 +40,10 @@ from wallsy.WallsyStream import WallsyStream
     type=click.Path(
         path_type=Path
     ),  # make sure that file paths are always Path objects.
-    help="Load an image from file path. Ensures image is valid and stores a copy of the image in the Wallsy folder",
+    help=(
+        "Load an image from file path. Ensures image is valid and stores a copy of the"
+        " image in the Wallsy folder"
+    ),
 )
 @click.option(
     "--url",
@@ -48,7 +51,10 @@ from wallsy.WallsyStream import WallsyStream
     "urls",
     multiple=True,  # argument is now a tuple of str or an empty tuple
     type=str,
-    help="Load an image directly via url. Must link directly to an image resource, e.g. www.example.com/image.jpg",
+    help=(
+        "Load an image directly via url. Must link directly to an image resource, e.g."
+        " www.example.com/image.jpg"
+    ),
 )
 @click.option(
     "--verbose",

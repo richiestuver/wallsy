@@ -40,7 +40,8 @@ def cli(file: Path, radius):
     """
 
     describe(
-        f":blue_circle-emoji: 'blur' applying blur to '{file.name}' with radius {radius}.."
+        f":blue_circle-emoji: 'blur' applying blur to '{file.name}' with radius"
+        f" {radius}.."
     )
 
     file = image_handler.blur(

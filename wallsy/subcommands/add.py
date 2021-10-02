@@ -18,7 +18,10 @@ import click
     type=click.Path(
         path_type=Path
     ),  # make sure that file paths are always Path objects.
-    help="Load an image from file path. Ensures image is valid and stores a copy of the image in the Wallsy folder.",
+    help=(
+        "Load an image from file path. Ensures image is valid and stores a copy of the"
+        " image in the Wallsy folder."
+    ),
     multiple=True,
 )
 @click.option("--url", "-u", "urls", type=str, multiple=True)

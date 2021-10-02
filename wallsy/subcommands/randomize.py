@@ -27,14 +27,19 @@ from wallsy import unsplash_handler
     "--keyword",
     "-q",
     multiple=True,
-    help="Specify keyword to refine random results. Can use multiple times e.g. random -q pizza -q lemon",
+    help=(
+        "Specify keyword to refine random results. Can use multiple times e.g. random"
+        " -q pizza -q lemon"
+    ),
 )
 @click.option(
     "--size",
     "-s",
     "dimensions",
     type=(int, int),
-    help="(--online only) specify dimensions of the image to retrieve, e.g. -s 1920 1080",
+    help=(
+        "(--online only) specify dimensions of the image to retrieve, e.g. -s 1920 1080"
+    ),
 )
 @click.option(
     "--local/--online",
@@ -77,7 +82,8 @@ def cli(keyword, dimensions, local, count):
             img_set = list(config.WALLSY_MEDIA_DIR.iterdir())
             file = sample(img_set, 1)[0].resolve()
             confirm_success(
-                f":game_die-emoji: 'random' grabbed '{file.name}' from {config.WALLSY_MEDIA_DIR}"
+                f":game_die-emoji: 'random' grabbed '{file.name}' from"
+                f" {config.WALLSY_MEDIA_DIR}"
             )
 
         else:
