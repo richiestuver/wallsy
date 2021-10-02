@@ -79,14 +79,20 @@ from itertools import cycle
 import pytest
 from requests import HTTPError
 from requests.exceptions import RequestException
+from PIL import Image
 
 import wallsy.image_handler
 
 # following entities are tested in this module:
 from wallsy.image_handler import download_image
 from wallsy.image_handler import validate_image
+from wallsy.image_handler import blur
+from wallsy.image_handler import greyscale
+from wallsy.image_handler import quantize
+from wallsy.image_handler import colorize
 from wallsy.image_handler import ImageDownloadError
 from wallsy.image_handler import InvalidImageError
+from wallsy.image_handler import ImageProcessingError
 
 
 @pytest.mark.parametrize(
@@ -391,3 +397,76 @@ def test_validate_image_failure_filenotfound():
 
     with pytest.raises(InvalidImageError):
         validate_image(Path("does_not_exist"))
+
+
+def test_blur_success(test_image, tmp_path):
+    """
+    Validate that blurring an image runs with no errors. (Does not validate that image is blurred.
+    At most we can assert the images are not equal, leaving this for future.)
+    """
+
+    for r in range(0, 50, 10):
+        blurred_img = blur(
+            test_image, dest_path=tmp_path / Path(test_image).name, radius=r
+        )
+
+        assert imghdr.what(blurred_img) is not None
+
+
+def test_blur_failure(tmp_path, test_image):
+    """
+    Test that blur fails on known invalid input.
+    """
+
+    with pytest.raises(ImageProcessingError):
+
+        # 'lambda' is a dummy callback that should error out when passed to PIL
+        blur(test_image, blur_func=lambda radius: 0)
+
+
+def test_greyscale_success(tmp_path, test_image):
+    """
+    Test that greyscale conversion succeeds.
+    """
+
+    greyscale_img = greyscale(
+        test_image,
+        dest_path=tmp_path / Path(test_image).name,
+    )
+
+    assert imghdr.what(greyscale_img) is not None
+
+    with Image.open(greyscale_img) as img:
+        assert img.mode == "L"  # greyscale
+
+
+def test_image_quantize_success(tmp_path, test_image):
+    """
+    Test that quantize runs successfully with no errors.
+    """
+
+    # PIL quantize is a slow operation. watch the number of iterations.
+    for colors in range(8, 32, 8):
+        quantize_img = quantize(
+            test_image, dest_path=tmp_path / Path(test_image).name, colors=colors
+        )
+
+        assert imghdr.what(quantize_img) is not None
+
+
+@pytest.mark.parametrize(
+    ["black", "white"],
+    [("black", "white"), ("darkblue", "lightgreen"), ("crimson", "pink")],
+)
+def test_colorize_success(tmp_path, test_image, black, white):
+    """
+    Test that colorize successfully returns with no errors.
+    """
+
+    greyscale_img = greyscale(test_image, dest_path=tmp_path / Path(test_image).name)
+    colorize_img = colorize(greyscale_img, black_value=black, white_value=white)
+
+    assert imghdr.what(colorize_img) is not None
+
+    with Image.open(colorize_img, "r") as img:
+        assert img.mode != "L"

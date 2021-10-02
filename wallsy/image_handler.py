@@ -41,6 +41,14 @@ class ImageDownloadError(Exception):
     pass
 
 
+class ImageProcessingError(Exception):
+    """
+    Raised when an image manipulation runs into an error.
+    """
+
+    pass
+
+
 def validate_image(input) -> str:
     """
     Determine whether input is a valid image. PIL open method accepts a Path object, string, or file object (buffered stream).
@@ -163,8 +171,16 @@ def blur(
 
     with Image.open(img_path) as image:
         blur_effect = blur_func(radius=radius)
-        # blur_effect = ImageFilter.BLUR
-        img_blur = image.filter(filter=blur_effect)
+
+        # validating images is responsibility of the validate function.
+        # if it's important, you should validate() your image before passing to
+        # an effect. this try will only catch errors that result from the filter
+        # process.
+
+        try:
+            img_blur = image.filter(filter=blur_effect)
+        except Exception as error:
+            raise ImageProcessingError(f"Could not blur image: {error}")
 
         if not dest_path:
             dest_path = img_path
@@ -187,7 +203,13 @@ def greyscale(
     """
 
     with Image.open(img_path) as image:
-        img_greyscale = image.convert(mode="L")  # 'L' corresponds to 8-bit greyscale
+
+        try:
+            img_greyscale = image.convert(
+                mode="L"
+            )  # 'L' corresponds to 8-bit greyscale
+        except Exception as error:
+            raise ImageProcessingError(f"Could not convert image to greyscale: {error}")
 
         if not dest_path:
             dest_path = img_path
@@ -201,7 +223,10 @@ def greyscale(
 
 
 def quantize(
-    img_path: Path, path_modifier: str = "quanitize", colors: int = 16
+    img_path: Path,
+    path_modifier: str = "quanitize",
+    colors: int = 16,
+    dest_path: Path = None,
 ) -> Path:
     """
     Helper function wraps the PIL quantization method. Opens image and writes image and saves
@@ -219,7 +244,14 @@ def quantize(
         # about quantization methods to really understand the options better. See Pillow docs.
         img_quantized = image.quantize(colors=colors, method=Image.MAXCOVERAGE)
         # after quantization our mode is "P" which has an alpha layer, not supported by jpg. Force to save as png.
-        out = Path(f"{img_path.parent / img_path.stem}-{path_modifier}{colors}.png")
+        img_quantized = image.convert(mode="RGB")
+
+        if not dest_path:
+            dest_path = img_path
+
+        out = Path(
+            f"{dest_path.parent / dest_path.stem}-{path_modifier}{colors}{dest_path.suffix}"
+        )
         img_quantized.save(out)
 
         return out
