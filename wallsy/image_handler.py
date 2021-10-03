@@ -275,9 +275,12 @@ def colorize(
 
     with Image.open(img_path) as img:
         img_grayscale = ImageOps.grayscale(img)
-        img_colorize = ImageOps.colorize(
-            img_grayscale, black=black_value, white=white_value
-        )
+        try:
+            img_colorize = ImageOps.colorize(
+                img_grayscale, black=black_value, white=white_value
+            )
+        except Exception as error:
+            raise ImageProcessingError(f"Could not colorize image: {error}")
         out = img_path.parent / f"{img_path.stem}-{path_modifier}{img_path.suffix}"
         img_colorize.save(out)
 

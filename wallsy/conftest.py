@@ -15,7 +15,7 @@ from itertools import cycle
 import pytest
 
 
-@pytest.fixture(scope="module")
+@pytest.fixture(scope="package")
 def cycle_test_images() -> cycle:
     """
     Return cycle (like an infinitely repeating generator) that collects all available test images
@@ -29,8 +29,8 @@ def cycle_test_images() -> cycle:
     return cycle(Path().rglob("test_data/**/*.jpg"))
 
 
-@pytest.fixture
-def test_image(cycle_test_images, scope="module") -> Path:
+@pytest.fixture(scope="package")
+def test_image(cycle_test_images) -> Path:
     """
     Returns the next Path object representing an image in the test_data folder.
     """

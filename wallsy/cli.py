@@ -22,6 +22,7 @@ from itertools import chain
 import click
 
 import wallsy.cli_utils.utils as utils
+from wallsy.cli_utils.console import console
 from wallsy.config import config
 from wallsy.cli_utils.decorators import catch_errors
 

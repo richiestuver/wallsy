@@ -470,3 +470,14 @@ def test_colorize_success(tmp_path, test_image, black, white):
 
     with Image.open(colorize_img, "r") as img:
         assert img.mode != "L"
+
+
+def test_colorize_failure(tmp_path, test_image):
+    """
+    Test that nonsense color names fail.
+    """
+
+    greyscale_img = greyscale(test_image, dest_path=tmp_path / Path(test_image).name)
+
+    with pytest.raises(ImageProcessingError):
+        colorize(greyscale_img, black_value="notBlack", white_value="notWhite")
