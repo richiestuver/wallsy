@@ -257,14 +257,3 @@ def process_pipeline(obj: WallsyStream, callbacks, *args, **kwargs):
 
     while stream.repeat:
         process_stream(stream)
-
-
-def main():
-
-    commands = utils.import_commands()
-    utils.attach_commands(cli, commands)
-    cli()
-
-
-if __name__ == "__main__":
-    main()
