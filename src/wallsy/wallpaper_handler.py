@@ -127,6 +127,7 @@ def update_wallpaper(img_path: Path, options=None) -> None:
         ]
     )
 
+    print(set_desktop_background)
     try:
 
         subprocess.run(
