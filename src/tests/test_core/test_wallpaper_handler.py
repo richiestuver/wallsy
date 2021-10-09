@@ -63,7 +63,8 @@ def test_update_background_success(test_image):
     update_wallpaper(test_image)
 
     wallpaper = subprocess.run(
-        "/usr/bin/gsettings get org.gnome.desktop.background picture-uri".split(" "),
+        "/usr/bin/gsettings get org.gnome.desktop.background picture-uri",
+        shell=True,
         check=True,
         text=True,
         capture_output=True,
@@ -111,7 +112,8 @@ def test_set_background_uri(test_image):
     update_wallpaper(test_image.absolute().as_uri())
 
     wallpaper = subprocess.run(
-        "/usr/bin/gsettings get org.gnome.desktop.background picture-uri".split(" "),
+        "/usr/bin/gsettings get org.gnome.desktop.background picture-uri",
+        shell=True,
         check=True,
         text=True,
         capture_output=True,

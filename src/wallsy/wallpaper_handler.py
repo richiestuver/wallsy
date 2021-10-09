@@ -45,7 +45,8 @@ def get_current_wallpaper() -> Path:
     try:
 
         process = subprocess.run(
-            list(get_desktop_background.values()),
+            " ".join(get_desktop_background.values()),
+            shell=True,
             capture_output=True,
             text=True,
             check=True,
@@ -126,7 +127,10 @@ def update_wallpaper(img_path: Path, options=None) -> None:
     try:
 
         subprocess.run(
-            list(set_desktop_background.values()), capture_output=True, check=True
+            " ".join(set_desktop_background.values()),
+            shell=True,
+            capture_output=True,
+            check=True,
         )
 
     except (OSError, subprocess.CalledProcessError) as error:
