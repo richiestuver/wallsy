@@ -47,5 +47,4 @@ toml==0.10.2
 typing-extensions==3.10.0.2
 urllib3==1.26.6
 virtualenv==20.7.2
--e git+https://github.com/richiestuver/wallsy@c09d96d5505d10172e8196151f7d97c3c0708a02#egg=wallsy
 wrapt==1.12.1
