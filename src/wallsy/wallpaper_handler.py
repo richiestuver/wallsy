@@ -35,7 +35,7 @@ def get_current_wallpaper() -> Path:
 
     get_desktop_background = OrderedDict(
         [
-            ("cmd", "gsettings"),
+            ("cmd", "/usr/bin/gsettings"),
             ("subcmd", "get"),
             ("schema", "org.gnome.desktop.background"),
             ("key", "picture-uri"),
@@ -115,7 +115,7 @@ def update_wallpaper(img_path: Path, options=None) -> None:
     # probably a better structure to use but this is good for now
     set_desktop_background = OrderedDict(
         [
-            ("cmd", "gsettings"),
+            ("cmd", "/usr/bin/gsettings"),
             ("subcmd", "set"),
             ("schema", "org.gnome.desktop.background"),
             ("key", "picture-uri"),
