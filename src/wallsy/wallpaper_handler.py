@@ -52,7 +52,7 @@ def get_current_wallpaper() -> Path:
             check=True,
         )
 
-    except (OSError, subprocess.CalledProcessError) as error:
+    except (subprocess.CalledProcessError) as error:
         raise WallpaperUpdateError(f"Could not retrieve current background: {error}")
 
     # the output we get from stdout is not cleanly formatted. for encoding reasons
@@ -133,5 +133,5 @@ def update_wallpaper(img_path: Path, options=None) -> None:
             check=True,
         )
 
-    except (OSError, subprocess.CalledProcessError) as error:
+    except (subprocess.CalledProcessError) as error:
         raise WallpaperUpdateError(f"Could not set desktop background: {error}")

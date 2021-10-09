@@ -70,6 +70,7 @@ def test_update_background_success(test_image):
         capture_output=True,
     )
 
+    assert wallpaper.returncode == 0
     assert wallpaper.stdout.strip().removeprefix("'").removesuffix("'") == str(
         test_image.absolute()
     )
@@ -119,6 +120,7 @@ def test_set_background_uri(test_image):
         capture_output=True,
     )
 
+    assert wallpaper.returncode == 0
     assert wallpaper.stdout.strip().removeprefix("'").removesuffix("'") == str(
         test_image.absolute()
     )
