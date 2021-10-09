@@ -225,7 +225,7 @@ def test_download_image_invalid_image(
     file_name = os.path.basename(urlparse(img_url).path)
     file_path = tmp_path / f"{file_name}.jpg"
 
-    with open("wallsy/tests/test_data/img/also_not_an_image.txt", "rb") as img:
+    with open("tests/test_data/img/also_not_an_image.txt", "rb") as img:
 
         mock_get.return_value = mock_response
         mock_response.content = img.read()
