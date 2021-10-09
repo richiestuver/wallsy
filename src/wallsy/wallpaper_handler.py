@@ -58,7 +58,12 @@ def get_current_wallpaper() -> Path:
     # I have not fully grasped yet. Cleanse the string by removing secret whitespace
     # and extraneous quote chars.
 
-    wallpaper: Path = Path(process.stdout.strip().removeprefix("'").removesuffix("'"))
+    wallpaper: Path = Path(
+        process.stdout.strip()
+        .removeprefix("'")
+        .removeprefix("file://")
+        .removesuffix("'")
+    )
 
     return wallpaper
 
@@ -79,7 +84,9 @@ def update_wallpaper(img_path: Path, options=None) -> None:
     XML schema is read directly, there is no path validation done by Gnome desktop
     """
 
-    wallpaper_location = Path(img_path).expanduser().resolve()
+    img_path = Path(str(img_path).removeprefix("file:"))
+
+    wallpaper_location = Path(img_path).expanduser().resolve().absolute()
 
     # subsequent operations will fail if path does not exist or is not a file, so catch this.
     if not wallpaper_location.exists() or not wallpaper_location.is_file():

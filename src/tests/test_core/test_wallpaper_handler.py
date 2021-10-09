@@ -104,3 +104,33 @@ def test_update_background_subprocess_failure(fake_run):
 
     with pytest.raises(WallpaperUpdateError):
         get_current_wallpaper()
+
+
+def test_set_background_uri(test_image):
+
+    update_wallpaper(test_image.absolute().as_uri())
+
+    wallpaper = subprocess.run(
+        "gsettings get org.gnome.desktop.background picture-uri".split(" "),
+        check=True,
+        text=True,
+        capture_output=True,
+    )
+
+    assert wallpaper.stdout.strip().removeprefix("'").removesuffix("'") == str(
+        test_image.absolute()
+    )
+
+
+@patch("wallsy.wallpaper_handler.subprocess.run", autospec=True)
+def test_get_background_uri(fake_run, test_image):
+
+    fake_run.return_value = subprocess.CompletedProcess(
+        args="",
+        stdout=test_image.absolute().as_uri(),
+        returncode=1,
+    )
+
+    wallpaper = get_current_wallpaper()
+    assert isinstance(wallpaper, Path)
+    assert wallpaper.exists()
