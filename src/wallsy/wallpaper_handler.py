@@ -47,9 +47,12 @@ def get_current_wallpaper() -> Path:
         process = subprocess.run(
             " ".join(get_desktop_background.values()),
             shell=True,
-            capture_output=True,
+            # capture_output=True,
             text=True,
             check=True,
+            stdin=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            stdout=subprocess.PIPE,
         )
 
     except (subprocess.CalledProcessError) as error:
@@ -129,8 +132,11 @@ def update_wallpaper(img_path: Path, options=None) -> None:
         subprocess.run(
             " ".join(set_desktop_background.values()),
             shell=True,
-            capture_output=True,
+            # capture_output=True,
             check=True,
+            stdin=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            stdout=subprocess.PIPE,
         )
 
     except (subprocess.CalledProcessError) as error:
