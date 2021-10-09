@@ -216,16 +216,17 @@ def test_download_image_new_directory(
         "https://images.unsplash.com/photo-1558328511-7d6490908755",
     ],
 )
+@pytest.mark.parametrize("txt_path", list(Path().rglob("test_data/**/*.txt")))
 @unittest.mock.patch("wallsy.image_handler.requests.models.Response", autospec=True)
 @unittest.mock.patch("wallsy.image_handler.requests.get", autospec=True)
 def test_download_image_invalid_image(
-    mock_get, mock_response, tmp_path, test_image, img_url
+    mock_get, mock_response, tmp_path, txt_path, img_url
 ):
 
     file_name = os.path.basename(urlparse(img_url).path)
     file_path = tmp_path / f"{file_name}.jpg"
 
-    with open("tests/test_data/img/also_not_an_image.txt", "rb") as img:
+    with open(txt_path, "rb") as img:
 
         mock_get.return_value = mock_response
         mock_response.content = img.read()

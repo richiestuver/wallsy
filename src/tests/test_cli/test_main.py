@@ -10,5 +10,5 @@ def test_launch_as_module_success(test_image):
 
 def test_launch_as_script_success(test_image):
 
-    result = run(f"python3 wallsy/cli.py --file {test_image} _test".split(" "))
+    result = run(f"python3 src/wallsy/cli.py --file {test_image} _test".split(" "))
     assert result.returncode == 0
