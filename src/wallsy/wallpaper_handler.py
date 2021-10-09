@@ -130,7 +130,7 @@ def update_wallpaper(img_path: Path, options=None) -> None:
     print(set_desktop_background)
     try:
 
-        subprocess.run(
+        result = subprocess.run(
             " ".join(set_desktop_background.values()),
             shell=True,
             # capture_output=True,
@@ -139,6 +139,8 @@ def update_wallpaper(img_path: Path, options=None) -> None:
             stderr=subprocess.PIPE,
             stdout=subprocess.PIPE,
         )
+
+        print(result.returncode, result.stdout, result.stderr)
 
     except (subprocess.CalledProcessError) as error:
         raise WallpaperUpdateError(f"Could not set desktop background: {error}")
