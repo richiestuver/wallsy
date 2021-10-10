@@ -12,6 +12,7 @@ colorama==0.4.4
 commonmark==0.9.1
 coverage==5.5
 distlib==0.3.2
+EasyProcess==0.3
 filelock==3.0.12
 flake8==3.9.2
 identify==2.2.13
@@ -26,6 +27,7 @@ nodeenv==1.6.0
 packaging==20.9
 pathspec==0.8.1
 Pillow==8.3.2
+pkg_resources==0.0.0
 platformdirs==2.2.0
 pluggy==0.13.1
 pre-commit==2.14.0
@@ -37,7 +39,9 @@ pylint==2.11.1
 pyparsing==2.4.7
 pytest==6.2.4
 pytest-cov==2.12.1
+pytest-xvfb==2.0.0
 python-dotenv==0.18.0
+PyVirtualDisplay==2.2
 PyYAML==5.4.1
 regex==2021.4.4
 requests==2.25.1
