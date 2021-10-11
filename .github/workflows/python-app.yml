@@ -37,5 +37,6 @@ jobs:
       run: |
         sudo apt-get update
         sudo apt-get install dbus-x11
+        sudo apt-get install desktop-file-utils
         update-desktop-database
         pytest
