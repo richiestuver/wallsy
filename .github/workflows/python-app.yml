@@ -49,4 +49,8 @@ jobs:
         sudo apt-get install dbus-x11
         sudo apt-get install desktop-file-utils
         update-desktop-database
-        pytest
+        pytest --cov-report=xml
+    - name: "Upload coverage to Codecov"
+      uses: codecov/codecov-action@v2
+      with:
+        fail_ci_if_error: true
