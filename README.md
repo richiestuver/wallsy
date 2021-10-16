@@ -1,4 +1,5 @@
 ![build and test status](https://github.com/richiestuver/wallsy/actions/workflows/python-app.yml/badge.svg)
+![code style: black](https://img.shields.io/badge/code%20style-black-black)
 # wallsy
 
 Create beautiful images, effects, and desktop wallpapers through composable edits on the command line.
