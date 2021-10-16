@@ -140,6 +140,8 @@ def _load_file(file: Path) -> Path:
     except shutil.SameFileError:
         warn(f"'{file.name}' is already located at {dest_path.parent}")
 
+    except Exception as error:
+        raise WallsyLoadError(error.with_traceback)
     # if we get this far, we should have a validated image. make the path available to other
     # subcommands by storing in the click context's object attribute (which is designed for this purpose)
 
