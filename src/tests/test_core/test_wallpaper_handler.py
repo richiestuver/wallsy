@@ -32,7 +32,6 @@ def test_get_background_success():
 
     wallpaper = get_current_wallpaper()
     assert isinstance(wallpaper, Path)
-    assert wallpaper.exists()
 
 
 @patch("wallsy.wallpaper_handler.subprocess.run", autospec=True)

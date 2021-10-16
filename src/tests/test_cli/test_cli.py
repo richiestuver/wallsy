@@ -41,7 +41,7 @@ def test_invocation_failure_no_commands(test_image):
 def test_option_file_single_success(test_image):
     result = runner.invoke(cli, ["--file", str(test_image.resolve()), "show"])
 
-    print(result.stderr, result.stdout)
+    print(result.stdout)
     assert result.exit_code == 0
 
 
