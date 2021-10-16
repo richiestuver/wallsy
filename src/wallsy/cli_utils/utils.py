@@ -116,12 +116,11 @@ def _load_file(file: Path) -> Path:
 
     dest_path = config.WALLSY_MEDIA_DIR
 
-    print(file)
     if not file.is_absolute():
         file = file.expanduser().resolve()
-    print(file)
+
     dest_path = dest_path / file.name
-    print(dest_path)
+
     # validate that the input file is a valid image.
     try:
         image_handler.validate_image(file)
