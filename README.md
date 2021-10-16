@@ -1,3 +1,4 @@
+![build and test status](https://github.com/richiestuver/wallsy/actions/workflows/python-app.yml/badge.svg)
 # wallsy
 
 Create beautiful images, effects, and desktop wallpapers through composable edits on the command line.
