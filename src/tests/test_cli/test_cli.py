@@ -38,13 +38,6 @@ def test_invocation_failure_no_commands(test_image):
     assert result.exit_code != 0
 
 
-def test_option_file_single_success(test_image):
-    result = runner.invoke(cli, ["--file", test_image, "show"])
-
-    print(result.stdout)
-    assert result.exit_code == 0
-
-
 # see test_image_handler.py to see this pattern used extensively for mocking out network calls
 @unittest.mock.patch("wallsy.image_handler.requests.models.Response", autospec=True)
 @unittest.mock.patch("wallsy.image_handler.requests.get", autospec=True)
