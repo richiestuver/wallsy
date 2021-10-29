@@ -32,8 +32,59 @@ from wallsy.cli_utils.decorators import catch_errors
 from wallsy.WallsyStream import WallsyStream
 
 
+@click.pass_obj
+@catch_errors
+def process_pipeline(obj: WallsyStream, callbacks, *args, **kwargs):
+    """
+    The result_callback decorator supplies this function with an argument containing all
+    of the return values from the invoked subcommands, as well as all of the arguments
+    supplied to the main group() function itself. By returning an inner function from
+    each subcommand, we can control the order of execution and process the results of
+    the pipeline arbitrarily. This is useful when the inner function is an iterator or
+    generator that yields and there is a good example of processing input text streams
+    this way in the Click documentation.
+    """
+
+    """
+    However, in our case we will use it to chain subcommands in such a way that we can
+    execute an entire image processing user flow in a single line on the command line,
+    e.g. download -> apply effect -> update background.
+
+    Note that this flow would entail retrieving an image, modifying that image,
+    then updating the wallpaper to retrieve from the corresponding file path.
+
+    Pipeline ordering
+
+    Image processing follows this general flow:
+    1) get an image -> 2) perform actions on image -> 3) peform actions on system
+    (e.g. desktop background)
+
+    1) must come first because all other actions require a valid image and existing
+    filepath in order to execute successfully.
+
+    all callbacks act on a stream (generator) either by yielding a modification to
+    each item in the iterable or extending the stream by chaining an additional
+    iterable to the generator.
+    """
+
+    def process_stream(stream: WallsyStream):
+
+        for callback in callbacks:
+            stream = callback(stream)
+
+        for _ in stream.stream:
+            pass
+
+    # do at least once, then bail out if no cycle
+    stream: WallsyStream = obj
+    process_stream(stream)
+
+    while stream.repeat:
+        process_stream(stream)
+
+
 @click.group(
-    chain=True,
+    chain=True, result_callback=process_pipeline
 )  # default behavior is to pass --help automatically if no subcommand provided
 @click.pass_context
 @click.option(
@@ -207,53 +258,11 @@ def cli(ctx: click.Context, files, urls, verbosity):
     return stream
 
 
-@cli.result_callback()
-@click.pass_obj
-@catch_errors
-def process_pipeline(obj: WallsyStream, callbacks, *args, **kwargs):
-    """
-    The result_callback decorator supplies this function with an argument containing all
-    of the return values from the invoked subcommands, as well as all of the arguments
-    supplied to the main group() function itself. By returning an inner function from
-    each subcommand, we can control the order of execution and process the results of
-    the pipeline arbitrarily. This is useful when the inner function is an iterator or
-    generator that yields and there is a good example of processing input text streams
-    this way in the Click documentation.
-    """
+# @entrypoint.result_callback()
 
-    """
-    However, in our case we will use it to chain subcommands in such a way that we can
-    execute an entire image processing user flow in a single line on the command line,
-    e.g. download -> apply effect -> update background.
 
-    Note that this flow would entail retrieving an image, modifying that image,
-    then updating the wallpaper to retrieve from the corresponding file path.
+def main():
 
-    Pipeline ordering
-
-    Image processing follows this general flow:
-    1) get an image -> 2) perform actions on image -> 3) peform actions on system
-    (e.g. desktop background)
-
-    1) must come first because all other actions require a valid image and existing
-    filepath in order to execute successfully.
-
-    all callbacks act on a stream (generator) either by yielding a modification to
-    each item in the iterable or extending the stream by chaining an additional
-    iterable to the generator.
-    """
-
-    def process_stream(stream: WallsyStream):
-
-        for callback in callbacks:
-            stream = callback(stream)
-
-        for _ in stream.stream:
-            pass
-
-    # do at least once, then bail out if no cycle
-    stream: WallsyStream = obj
-    process_stream(stream)
-
-    while stream.repeat:
-        process_stream(stream)
+    commands = utils.import_commands()
+    utils.attach_commands(cli, commands)
+    cli()
