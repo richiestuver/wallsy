@@ -39,7 +39,7 @@ MacOS and Windows are not supported at this time. Desktop wallpaper commands are
 
 The latest version of `wallsy` can be downloaded from Github using pip:
 ```
-$ pip install git+https://github.com/richiestuver/wallsy.git#egg=wallsy
+pip install git+https://github.com/richiestuver/wallsy.git#egg=wallsy
 ```
 
 An official PyPI package may be made available in the future. 
